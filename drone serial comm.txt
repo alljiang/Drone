@@ -5,12 +5,12 @@ joystick: 4:<up>:<forward>:<right>
 zero MPU: "ZERO"
 
 [0]  enabled                            [0-disable,1-enable]
-[1]  zero mpu                           non
+[1]  zero mpu                           none
 [2]  joystick values                    [RY, -100 to 100, thrust][LY, -100 to 100, front/back tilt][LX, -100 to 100, side tilt][RB, yaw, 0/1][LB, yaw, 0/1]
 [3]  set motor speeds (for testing)     [FR, 0 to 100][FL, 0 to 100][BL, 0 to 100][BR, 0 to 100]
 [4]  set PID constants                  [sign 0/+ or 1/-][yawkP*100000<<24][yawkP*100000%(0x1000000)<<16][yawkP*100000%(0x10000)<<8][yawkP*100000%(0x100)]
                                         [sign 0/+ or 1/-][yawkI*100000<<24][yawkI*100000%(0x1000000)<<16][yawkI*100000%(0x10000)<<8][yawkI*100000%(0x100)]
-                                        [sign 0/+ or 1/-][yawkD*100000<<24][yawkD*100000%(0x1000000)<<16][yawkD*100000%(0x10000)<<8][yawkD*100000%(0x100)]
+                                        [sign 0/+ or 1/-][yawkD*100000<<24][yawkD*100000%(0x1000000)<<16][yawkD*100000%(0x10000)<<8+][yawkD*100000%(0x100)]
                                         [sign 0/+ or 1/-][pitchrollkP*100000<<24][pitchrollkP*100000%(0x1000000)<<16][pitchrollkP*100000%(0x10000)<<8][pitchrollkP*100000%(0x100)]
                                         [sign 0/+ or 1/-][pitchrollkI*100000<<24][pitchrollkI*100000%(0x1000000)<<16][pitchrollkI*100000%(0x10000)<<8][pitchrollkI*100000%(0x100)]
                                         [sign 0/+ or 1/-][pitchrollkD*100000<<24][pitchrollkD*100000%(0x1000000)<<16][pitchrollkD*100000%(0x10000)<<8][pitchrollkD*100000%(0x100)]
@@ -23,7 +23,7 @@ current MPU values: 8:<yaw>:<pitch>:<roll>:<forward/y>:<sideways/x>:<up/z>
 print to console: 7:<message>
 
 byte array size 8, second will include string
-[0] current motor value     [FR, 0 to 100][FL, 0 to 100][BL, 0 to 100][BR, 0 to 100]
-[1] current MPU readings    [yaw, limited -100 to 100][pitch, limited -100 to 100][roll, limited -100 to 100]
-[2] number of msg bytes     [number of following bytes][char][char][char]...
+[9] current motor value     [FR, 0 to 100][FL, 0 to 100][BL, 0 to 100][BR, 0 to 100]
+[8] current MPU readings    [yaw, limited -100 to 100][pitch, limited -100 to 100][roll, limited -100 to 100]
+[7] number of msg bytes     [number of following bytes][char][char][char]...
 

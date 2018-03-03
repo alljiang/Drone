@@ -514,7 +514,7 @@ public class DriverStation
         MotorController2.setValue(0);
         MotorController3.setValue(0);
         updatePID();
-        send(new byte[]{3,0,0,0,0});
+        send(new byte[]{3, 0, 0, 0, 0});
         pw.close();
         try
         {
@@ -543,7 +543,7 @@ public class DriverStation
 
     private void drive()
     {
-        send(new byte[] {YAxisVal,POVXVal,POVYVal,,}); //TODO FIX THIS!!!
+//        send(new byte[]{YAxisVal, POVXVal, POVYVal, ,}); //TODO FIX THIS!!!
     }
 
     int errorReportLoops = 5;
@@ -554,8 +554,8 @@ public class DriverStation
         if (toSend.length == 0) return;
         try
         {
-            int checksum = calculateChecksum(toSend);
-            port.writeBytes(new byte[]{(byte)checksum}, 1);
+            byte checksum = calculateChecksum(toSend);
+            port.writeBytes(new byte[]{checksum}, 1);
             port.writeBytes(toSend, toSend.length);
 //            output.println(toSend);
 //            output.flush();
@@ -568,12 +568,16 @@ public class DriverStation
 
     private byte calculateChecksum(byte[] arr)
     {
-        int sum = 0;
-        for(byte b : arr) sum += b;
-        return (byte)sum;
+        //ALWAYS SKIP FIRST VALUE
+        byte sum = 0;
+        boolean first = true;
+        for (byte b : arr)
+        {
+            if(first)
+            sum += b;
+        }
+        return sum;
     }
-
-    String received = "";
 
     private void receive()
     {
@@ -583,12 +587,31 @@ public class DriverStation
             if (!scanner.hasNext()) scanner = new Scanner(port.getInputStream());
             while (scanner.hasNext())
             {
+                byte checkSum = scanner.nextByte();
+                byte command = scanner.nextByte();
+                {
+
+                }
+                else if(command == 7)
+            {
+
+                if(command == 9)
+                {
+                    byte[] motorValues = {scanner.nextByte(), scanner.nextByte(), scanner.nextByte(), scanner.nextByte()};
+                    if(calculateChecksum(motorValues) != checkSum)
+                    {
+
+                    }
+                }
+                else if(command == 8)
+                }
+
                 received = scanner.nextLine();
                 int checksumIndex = received.indexOf("/");
                 if (checksumIndex == -1) return;
                 int checksum = Integer.parseInt(received.substring(0, checksumIndex));
                 received = received.substring(checksumIndex + 1);
-                if (calculateChecksum(received) != checksum) return;
+//                if (calculateChecksum(received) != checksum) return;
                 int index = received.indexOf(":");
                 if (index == -1) return;
                 System.out.println(received);
@@ -636,7 +659,6 @@ public class DriverStation
         {
             e.printStackTrace();
         }
-        received = "";
     }
 
     private void update()
@@ -709,8 +731,8 @@ public class DriverStation
             //set motor values for disabled testing
         else
         {
-            byte[] toSend = new byte[] {3,(byte)MotorController0.getValue(), (byte)MotorController1.getValue(),
-                    (byte)MotorController2.getValue(), (byte)MotorController3.getValue()};
+            byte[] toSend = new byte[]{3, (byte) MotorController0.getValue(), (byte) MotorController1.getValue(),
+                    (byte) MotorController2.getValue(), (byte) MotorController3.getValue()};
             send(toSend);
         }
 
@@ -848,19 +870,19 @@ public class DriverStation
     {
         String text = yawkp + " " + yawki + " " + yawkd + " " + pitchkp + " " + pitchki + " " + pitchkd;
         printToConsole("Set PID to: " + text);
-        byte[] toSend = new byte[] { 4,
-                (byte)(yawkp<0?1:0),(byte)((int)(yawkp*100000)<<24),(byte)((int)(yawkp*100000)<<16%(0x1000000)),
-                (byte)((int)(yawkp*100000)%(0x10000)<<8),(byte)((int)(yawkp*100000)%(0x100)),
-                (byte)(yawki<0?1:0),(byte)((int)(yawki*100000)<<24),(byte)((int)(yawki*100000)<<16%(0x1000000)),
-                (byte)((int)(yawki*100000)%(0x10000)<<8),(byte)((int)(yawki*100000)%(0x100)),
-                (byte)(yawkd<0?1:0),(byte)((int)(yawkd*100000)<<24),(byte)((int)(yawkd*100000)<<16%(0x1000000)),
-                (byte)((int)(yawkd*100000)%(0x10000)<<8),(byte)((int)(yawkd*100000)%(0x100)),
-                (byte)(pitchkp<0?1:0),(byte)((int)(pitchkp*100000)<<24),(byte)((int)(pitchkp*100000)<<16%(0x1000000)),
-                (byte)((int)(pitchkp*100000)%(0x10000)<<8),(byte)((int)(pitchkp*100000)%(0x100)),
-                (byte)(pitchki<0?1:0),(byte)((int)(pitchki*100000)<<24),(byte)((int)(pitchki*100000)<<16%(0x1000000)),
-                (byte)((int)(pitchki*100000)%(0x10000)<<8),(byte)((int)(pitchki*100000)%(0x100)),
-                (byte)(pitchkd<0?1:0),(byte)((int)(pitchkd*100000)<<24),(byte)((int)(pitchkd*100000)<<16%(0x1000000)),
-                (byte)((int)(pitchkd*100000)%(0x10000)<<8),(byte)((int)(pitchkd*100000)%(0x100))
+        byte[] toSend = new byte[]{4,
+                (byte) (yawkp < 0 ? 1 : 0), (byte) ((int) (yawkp * 100000) << 24), (byte) ((int) (yawkp * 100000) << 16 % (0x1000000)),
+                (byte) ((int) (yawkp * 100000) % (0x10000) << 8), (byte) ((int) (yawkp * 100000) % (0x100)),
+                (byte) (yawki < 0 ? 1 : 0), (byte) ((int) (yawki * 100000) << 24), (byte) ((int) (yawki * 100000) << 16 % (0x1000000)),
+                (byte) ((int) (yawki * 100000) % (0x10000) << 8), (byte) ((int) (yawki * 100000) % (0x100)),
+                (byte) (yawkd < 0 ? 1 : 0), (byte) ((int) (yawkd * 100000) << 24), (byte) ((int) (yawkd * 100000) << 16 % (0x1000000)),
+                (byte) ((int) (yawkd * 100000) % (0x10000) << 8), (byte) ((int) (yawkd * 100000) % (0x100)),
+                (byte) (pitchkp < 0 ? 1 : 0), (byte) ((int) (pitchkp * 100000) << 24), (byte) ((int) (pitchkp * 100000) << 16 % (0x1000000)),
+                (byte) ((int) (pitchkp * 100000) % (0x10000) << 8), (byte) ((int) (pitchkp * 100000) % (0x100)),
+                (byte) (pitchki < 0 ? 1 : 0), (byte) ((int) (pitchki * 100000) << 24), (byte) ((int) (pitchki * 100000) << 16 % (0x1000000)),
+                (byte) ((int) (pitchki * 100000) % (0x10000) << 8), (byte) ((int) (pitchki * 100000) % (0x100)),
+                (byte) (pitchkd < 0 ? 1 : 0), (byte) ((int) (pitchkd * 100000) << 24), (byte) ((int) (pitchkd * 100000) << 16 % (0x1000000)),
+                (byte) ((int) (pitchkd * 100000) % (0x10000) << 8), (byte) ((int) (pitchkd * 100000) % (0x100))
         };
         send(toSend);
         return text;

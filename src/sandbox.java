@@ -15,8 +15,9 @@ public class sandbox
 
     public static void main(String[] args)
     {
-        int i = 129;
-        byte b = (byte) i;
+        byte b = 6;
+        int a = 6;
+        System.out.println(a == b);
     }
 
     public static byte[] toBytes(double d)
