@@ -588,13 +588,6 @@ public class DriverStation
             while (scanner.hasNext())
             {
                 byte checkSum = scanner.nextByte();
-                byte command = scanner.nextByte();
-                {
-
-                }
-                else if(command == 7)
-            {
-
                 if(command == 9)
                 {
                     byte[] motorValues = {scanner.nextByte(), scanner.nextByte(), scanner.nextByte(), scanner.nextByte()};
@@ -604,6 +597,12 @@ public class DriverStation
                     }
                 }
                 else if(command == 8)
+                {
+
+                }
+                else if(command == 7)
+                {
+
                 }
 
                 received = scanner.nextLine();
