@@ -31,13 +31,6 @@
     <JAVADOC />
     <NATIVE>
       <root url="file://$PROJECT_DIR$/Libraries" />
-      <root url="file://$PROJECT_DIR$/Libraries" />
-      <root url="file://$PROJECT_DIR$/Libraries" />
-      <root url="file://$PROJECT_DIR$/Libraries" />
-      <root url="file://$PROJECT_DIR$/Libraries" />
-      <root url="file://$PROJECT_DIR$/Libraries" />
-      <root url="file://$PROJECT_DIR$/Libraries" />
-      <root url="file://$PROJECT_DIR$/Libraries" />
     </NATIVE>
     <SOURCES />
   </library>

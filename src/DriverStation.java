@@ -61,19 +61,19 @@ public class DriverStation
     private JPanel BtnStatus10;
     private JPanel BtnStatus11;
     private JPanel BtnStatus12;
-    private boolean Btn0;
-    private boolean Btn1;
-    private boolean Btn2;
-    private boolean Btn3;
-    private boolean Btn4;
-    private boolean Btn5;
-    private boolean Btn6;
-    private boolean Btn7;
-    private boolean Btn8;
-    private boolean Btn9;
-    private boolean Btn10;
-    private boolean Btn11;
-    private boolean Btn12;
+    private boolean Btn0; //Y
+    private boolean Btn1; //B
+    private boolean Btn2; //A
+    private boolean Btn3; //X
+    private boolean Btn4; //LB
+    private boolean Btn5; //RB
+    private boolean Btn6; //LTRIGGER
+    private boolean Btn7; //RTRIGGER
+    private boolean Btn8; //BACKBTN
+    private boolean Btn9; //STARTBTN
+    private boolean Btn10; //LCLICK
+    private boolean Btn11; //RCLICK
+    private boolean Btn12; //HOMEBTN
     private JProgressBar POVXAxis;
     private JProgressBar POVYAxis;
     private JLabel CurrentYawI;
@@ -109,8 +109,6 @@ public class DriverStation
     private JButton mpuZeroButton;
     private JPanel GraphPanel;
     SerialPort port = null;
-    Scanner scanner = null;
-    PrintWriter output;
     boolean droneEnabled = false;
     boolean continueClock = false;
     long startElapsedTime = 0;
@@ -314,8 +312,6 @@ public class DriverStation
                     try
                     {
                         port.closePort();
-                        scanner.close();
-                        output.close();
                     } catch (Exception ee)
                     {
                     }
@@ -325,9 +321,6 @@ public class DriverStation
                     {
                         port.setFlowControl(SerialPort.FLOW_CONTROL_DISABLED);
                         port.setBaudRate(baudRate);
-                        port.setComPortTimeouts(SerialPort.TIMEOUT_SCANNER, 0, 0);
-                        output = new PrintWriter(port.getOutputStream());
-                        scanner = new Scanner(port.getInputStream());
                         printToConsole("Set COM port to " + COMCombo.getItemAt(COMCombo.getSelectedIndex()));
                     }
                 } catch (Exception ee)
@@ -440,10 +433,8 @@ public class DriverStation
             port = SerialPort.getCommPorts()[0];
             if (port.openPort())
             {
-                port.setComPortTimeouts(SerialPort.TIMEOUT_SCANNER, 0, 0);
+//                port.setComPortTimeouts(SerialPort.TIMEOUT_SCANNER, 0, 0);
                 port.setBaudRate(baudRate);
-                scanner = new Scanner(port.getInputStream());
-                output = new PrintWriter(port.getOutputStream());
             }
         }
         //Controller Selection
@@ -543,7 +534,7 @@ public class DriverStation
 
     private void drive()
     {
-//        send(new byte[]{YAxisVal, POVXVal, POVYVal, ,}); //TODO FIX THIS!!!
+        send(new byte[]{0x2, (byte) Math.round(YAxisVal), (byte) Math.round(RYAxisVal), (byte) Math.round(RXAxisVal), Btn6 ? (byte) 1 : (byte) 0, Btn7 ? (byte) 1 : (byte) 0});
     }
 
     int errorReportLoops = 5;
@@ -554,16 +545,28 @@ public class DriverStation
         if (toSend.length == 0) return;
         try
         {
+            port.writeBytes(new byte[]{toSend[0]}, 1);
+            toSend = takeOutFirstByte(toSend);
             byte checksum = calculateChecksum(toSend);
             port.writeBytes(new byte[]{checksum}, 1);
             port.writeBytes(toSend, toSend.length);
-//            output.println(toSend);
-//            output.flush();
-            System.out.println("Sent: " + toSend);
+            System.out.println("Sent: " + Arrays.toString(toSend));
         } catch (Exception e)
         {
-            if (errorReportLoopsCount++ == errorReportLoops) System.out.println("Printwriter COM Port Error");
+            if (errorReportLoopsCount++ == errorReportLoops)
+            {
+                errorReportLoopsCount = 0;
+                System.out.println("Printwriter COM Port Error");
+                e.printStackTrace();
+            }
         }
+    }
+
+    private byte[] takeOutFirstByte(byte[] arr)
+    {
+        byte[] toReturn = new byte[arr.length - 1];
+        for (int i = 1; i < arr.length; i++) toReturn[i - 1] = arr[i];
+        return toReturn;
     }
 
     private byte calculateChecksum(byte[] arr)
@@ -573,7 +576,7 @@ public class DriverStation
         boolean first = true;
         for (byte b : arr)
         {
-            if(first)
+            if (first) continue;
             sum += b;
         }
         return sum;
@@ -583,81 +586,65 @@ public class DriverStation
     {
         try
         {
-            if (scanner == null) return;
-            if (!scanner.hasNext()) scanner = new Scanner(port.getInputStream());
-            while (scanner.hasNext())
+            if (port.bytesAvailable() == 0) return;
+            byte[] cmd = new byte[1];
+            port.readBytes(cmd, 1);
+            byte[] checkSum = new byte[1];
+            port.readBytes(checkSum, 1);
+            if (cmd[0] == 9) //CURRENT MOTOR VALUES
             {
-                byte checkSum = scanner.nextByte();
-                if(command == 9)
+                byte[] motorValues = new byte[4];
+                port.readBytes(motorValues, 4);
+                if (calculateChecksum(motorValues) != checkSum[0])
                 {
-                    byte[] motorValues = {scanner.nextByte(), scanner.nextByte(), scanner.nextByte(), scanner.nextByte()};
-                    if(calculateChecksum(motorValues) != checkSum)
-                    {
-
-                    }
+                    //flush
                 }
-                else if(command == 8)
+                M0.setText("M0: " + motorValues[0]);
+                M1.setText("M1: " + motorValues[1]);
+                M2.setText("M2: " + motorValues[2]);
+                M3.setText("M3: " + motorValues[3]);
+            } else if (cmd[0] == 8)//CURRENT MPU READINGS
+            {
+                byte[] readings = new byte[3];
+                port.readBytes(readings, 3);
+                if (calculateChecksum(readings) != checkSum[0])
                 {
-
+                    //flush
                 }
-                else if(command == 7)
-                {
-
-                }
-
-                received = scanner.nextLine();
-                int checksumIndex = received.indexOf("/");
-                if (checksumIndex == -1) return;
-                int checksum = Integer.parseInt(received.substring(0, checksumIndex));
-                received = received.substring(checksumIndex + 1);
-//                if (calculateChecksum(received) != checksum) return;
-                int index = received.indexOf(":");
-                if (index == -1) return;
-                System.out.println(received);
-                int command = Integer.parseInt(received.substring(0, index));
-                received = received.substring(index + 1);
-                if (command == 9)
-                {
-                    index = received.indexOf(":");
-                    double motor0 = Double.parseDouble(received.substring(0, index));
-                    received = received.substring(index + 1);
-                    index = received.indexOf(":");
-                    double motor1 = Double.parseDouble(received.substring(0, index));
-                    received = received.substring(index + 1);
-                    index = received.indexOf(":");
-                    double motor2 = Double.parseDouble(received.substring(0, index));
-                    received = received.substring(index + 1);
-                    double motor3 = Double.parseDouble(received);
-                    M0.setText("M0: " + motor0);
-                    M1.setText("M1: " + motor1);
-                    M2.setText("M2: " + motor2);
-                    M3.setText("M3: " + motor3);
-                }
-                if (command == 8)
-                {
-                    index = received.indexOf(":");
-                    double yaw = Double.parseDouble(received.substring(0, index));
-                    received = received.substring(index + 1);
-                    index = received.indexOf(":");
-                    double pitch = Double.parseDouble(received.substring(0, index));
-                    received = received.substring(index + 1);
-                    double roll = Double.parseDouble(received.substring(0));
-                    currentYaw.setText(String.format("%.2f", yaw));
-                    currentPitch.setText(String.format("%.2f", pitch));
-                    currentRoll.setText(String.format("%.2f", roll));
-                    pw.println(roll);
-                    if (droneEnabled) rollStorage.add(roll);
-                    if (droneEnabled) pitchStorage.add(pitch);
-                }
-                if (command == 7)
-                {
-                    printToConsole(received);
-                }
+                currentYaw.setText(readings[0] + "");
+                currentPitch.setText(readings[1] + "");
+                currentRoll.setText(readings[2] + "");
+            } else if (cmd[0] == 7) //MESSAGE INTO CONSOLE
+            {
+                byte[] sizeSigned = new byte[1];
+                int size = unsign(sizeSigned[0]);
+                byte[] strArr = new byte[size];
+                port.readBytes(strArr, size);
+                String s = "";
+                for (byte b : strArr) s += (char) unsign(b);
+                printToConsole(s);
             }
         } catch (Exception e)
         {
             e.printStackTrace();
         }
+    }
+
+    private byte[] concatenate(byte[] one, byte[] two)
+    {
+        int totalsize = one.length + two.length;
+        byte[] toReturn = new byte[totalsize];
+        int index = 0;
+        for (byte b : one)
+            toReturn[index++] = b;
+        for (byte b : two)
+            toReturn[index++] = b;
+        return toReturn;
+    }
+
+    private int unsign(byte b)
+    {
+        return b & 0xFF;
     }
 
     private void update()
@@ -870,18 +857,18 @@ public class DriverStation
         String text = yawkp + " " + yawki + " " + yawkd + " " + pitchkp + " " + pitchki + " " + pitchkd;
         printToConsole("Set PID to: " + text);
         byte[] toSend = new byte[]{4,
-                (byte) (yawkp < 0 ? 1 : 0), (byte) ((int) (yawkp * 100000) << 24), (byte) ((int) (yawkp * 100000) << 16 % (0x1000000)),
-                (byte) ((int) (yawkp * 100000) % (0x10000) << 8), (byte) ((int) (yawkp * 100000) % (0x100)),
-                (byte) (yawki < 0 ? 1 : 0), (byte) ((int) (yawki * 100000) << 24), (byte) ((int) (yawki * 100000) << 16 % (0x1000000)),
-                (byte) ((int) (yawki * 100000) % (0x10000) << 8), (byte) ((int) (yawki * 100000) % (0x100)),
-                (byte) (yawkd < 0 ? 1 : 0), (byte) ((int) (yawkd * 100000) << 24), (byte) ((int) (yawkd * 100000) << 16 % (0x1000000)),
-                (byte) ((int) (yawkd * 100000) % (0x10000) << 8), (byte) ((int) (yawkd * 100000) % (0x100)),
-                (byte) (pitchkp < 0 ? 1 : 0), (byte) ((int) (pitchkp * 100000) << 24), (byte) ((int) (pitchkp * 100000) << 16 % (0x1000000)),
-                (byte) ((int) (pitchkp * 100000) % (0x10000) << 8), (byte) ((int) (pitchkp * 100000) % (0x100)),
-                (byte) (pitchki < 0 ? 1 : 0), (byte) ((int) (pitchki * 100000) << 24), (byte) ((int) (pitchki * 100000) << 16 % (0x1000000)),
-                (byte) ((int) (pitchki * 100000) % (0x10000) << 8), (byte) ((int) (pitchki * 100000) % (0x100)),
-                (byte) (pitchkd < 0 ? 1 : 0), (byte) ((int) (pitchkd * 100000) << 24), (byte) ((int) (pitchkd * 100000) << 16 % (0x1000000)),
-                (byte) ((int) (pitchkd * 100000) % (0x10000) << 8), (byte) ((int) (pitchkd * 100000) % (0x100))
+                (byte) (yawkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkp) * 100000) << 24), (byte) ((int) (Math.abs(yawkp) * 100000) << 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(yawkp) * 100000) % (0x10000) << 8), (byte) ((int) (Math.abs(yawkp) * 100000) % (0x100)),
+                (byte) (yawki < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawki) * 100000) << 24), (byte) ((int) (Math.abs(yawki) * 100000) << 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(yawki) * 100000) % (0x10000) << 8), (byte) ((int) (Math.abs(yawki) * 100000) % (0x100)),
+                (byte) (yawkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkd) * 100000) << 24), (byte) ((int) (Math.abs(yawkd) * 100000) << 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(yawkd) * 100000) % (0x10000) << 8), (byte) ((int) (Math.abs(yawkd) * 100000) % (0x100)),
+                (byte) (pitchkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchkp) * 100000) << 24), (byte) ((int) (Math.abs(pitchkp) * 100000) << 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(pitchkp) * 100000) % (0x10000) << 8), (byte) ((int) (Math.abs(pitchkp) * 100000) % (0x100)),
+                (byte) (pitchki < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchki) * 100000) << 24), (byte) ((int) (Math.abs(pitchki) * 100000) << 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(pitchki) * 100000) % (0x10000) << 8), (byte) ((int) (Math.abs(pitchki) * 100000) % (0x100)),
+                (byte) (pitchkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchkd) * 100000) << 24), (byte) ((int) (Math.abs(pitchkd) * 100000) << 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(pitchkd) * 100000) % (0x10000) << 8), (byte) ((int) (Math.abs(pitchkd) * 100000) % (0x100))
         };
         send(toSend);
         return text;
@@ -922,7 +909,7 @@ public class DriverStation
     private void zeroMPU()
     {
         for (int i = 0; i < 10; i++)
-            send(new byte[]{0x1});
+            send(new byte[]{0x1, 0x2, 0x3});
     }
 
     String ConsoleHistory = "";
@@ -936,30 +923,6 @@ public class DriverStation
         Console.setText(ConsoleHistory);
         JScrollBar vertical = ConsoleScrollPane.getVerticalScrollBar();
         vertical.setValue(vertical.getMaximum());
-    }
-
-    /**
-     * @noinspection ALL
-     */
-    private Font $$$getFont$$$(String fontName, int style, int size, Font currentFont)
-    {
-        if (currentFont == null) return null;
-        String resultName;
-        if (fontName == null)
-        {
-            resultName = currentFont.getName();
-        } else
-        {
-            Font testFont = new Font(fontName, Font.PLAIN, 10);
-            if (testFont.canDisplay('a') && testFont.canDisplay('1'))
-            {
-                resultName = fontName;
-            } else
-            {
-                resultName = currentFont.getName();
-            }
-        }
-        return new Font(resultName, style >= 0 ? style : currentFont.getStyle(), size >= 0 ? size : currentFont.getSize());
     }
 
     /**
@@ -1464,6 +1427,30 @@ public class DriverStation
         if (mpuZeroButtonFont != null) mpuZeroButton.setFont(mpuZeroButtonFont);
         mpuZeroButton.setText("Calibrate Gyroscope and Accelerometer");
         DriverPanel.add(mpuZeroButton, new com.intellij.uiDesigner.core.GridConstraints(7, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    }
+
+    /**
+     * @noinspection ALL
+     */
+    private Font $$$getFont$$$(String fontName, int style, int size, Font currentFont)
+    {
+        if (currentFont == null) return null;
+        String resultName;
+        if (fontName == null)
+        {
+            resultName = currentFont.getName();
+        } else
+        {
+            Font testFont = new Font(fontName, Font.PLAIN, 10);
+            if (testFont.canDisplay('a') && testFont.canDisplay('1'))
+            {
+                resultName = fontName;
+            } else
+            {
+                resultName = currentFont.getName();
+            }
+        }
+        return new Font(resultName, style >= 0 ? style : currentFont.getStyle(), size >= 0 ? size : currentFont.getSize());
     }
 
     /**
