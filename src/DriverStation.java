@@ -546,9 +546,9 @@ public class DriverStation
         try
         {
             port.writeBytes(new byte[]{toSend[0]}, 1);
-            toSend = takeOutFirstByte(toSend);
             byte checksum = calculateChecksum(toSend);
             port.writeBytes(new byte[]{checksum}, 1);
+            toSend = takeOutFirstByte(toSend);
             port.writeBytes(toSend, toSend.length);
             System.out.println("Sent: " + Arrays.toString(toSend));
         } catch (Exception e)
