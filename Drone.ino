@@ -119,16 +119,12 @@ void loop() {
 }
 
 void send(byte toSend[]) {
-  byte header[1];
-  byte checksum[1];
-  header[0] = toSend[0];
-  checksum[0] = calculateChecksum(toSend);
-  Serial.write(header, 1);
-  Serial.write(checksum, 1);
-  byte headerless[sizeof(toSend) -1];
-  for (int i = 1; i < sizeof(toSend); i++)  //take out first byte
-      headerless[i - 1] = toSend[i];
-  Serial.write(headerless, sizeof(toSend) -1);
+  byte packet[sizeof(toSend)+1];
+  packet[0] = toSend[0];
+  for (int i = 1; i < sizeof(toSend); i++)
+	  packet[i + 1] = toSend[i];
+  packet[1] = cksum(packet + 2, sizeof(toSend)-1);
+  Serial.write(packet, sizeof(packet));
   Serial.flush();
 }
 
@@ -142,12 +138,24 @@ byte calculateChecksum(byte arr[])
 }
 
 
-void sendConsole(String s) {
-  byte toSend[s.length()+1];
-  for(int i = 1; i < s.length()+1; i++)
-    toSend[i] = s.charAt(i);
-  toSend[0] = 0x7;
-  send(toSend);
+void sendConsole(String s) 
+{
+  byte packet[s.length()+2];
+  for (int i = 0; i < s.length(); i++)
+	  packet[2 + i] = s.charAt(i);
+
+  packet[0] = 0x07;
+  packet[1] = cksum(packet + 2, sizeof(s));
+
+  Serial.write(packet, sizeof(packet));
+}
+
+byte cksum(byte buffer[], int numToCal)
+{
+	byte ck = 0;
+	for (int i = 0; i < numToCal; i++)
+		ck += buffer[i];
+	return ck;
 }
 
 void sendUpdates()
