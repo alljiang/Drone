@@ -857,18 +857,18 @@ public class DriverStation
         String text = yawkp + " " + yawki + " " + yawkd + " " + pitchkp + " " + pitchki + " " + pitchkd;
         printToConsole("Set PID to: " + text);
         byte[] toSend = new byte[]{4,
-                (byte) (yawkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkp) * 100000) << 24), (byte) ((int) (Math.abs(yawkp) * 100000) << 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(yawkp) * 100000) % (0x10000) << 8), (byte) ((int) (Math.abs(yawkp) * 100000) % (0x100)),
-                (byte) (yawki < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawki) * 100000) << 24), (byte) ((int) (Math.abs(yawki) * 100000) << 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(yawki) * 100000) % (0x10000) << 8), (byte) ((int) (Math.abs(yawki) * 100000) % (0x100)),
-                (byte) (yawkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkd) * 100000) << 24), (byte) ((int) (Math.abs(yawkd) * 100000) << 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(yawkd) * 100000) % (0x10000) << 8), (byte) ((int) (Math.abs(yawkd) * 100000) % (0x100)),
-                (byte) (pitchkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchkp) * 100000) << 24), (byte) ((int) (Math.abs(pitchkp) * 100000) << 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(pitchkp) * 100000) % (0x10000) << 8), (byte) ((int) (Math.abs(pitchkp) * 100000) % (0x100)),
-                (byte) (pitchki < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchki) * 100000) << 24), (byte) ((int) (Math.abs(pitchki) * 100000) << 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(pitchki) * 100000) % (0x10000) << 8), (byte) ((int) (Math.abs(pitchki) * 100000) % (0x100)),
-                (byte) (pitchkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchkd) * 100000) << 24), (byte) ((int) (Math.abs(pitchkd) * 100000) << 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(pitchkd) * 100000) % (0x10000) << 8), (byte) ((int) (Math.abs(pitchkd) * 100000) % (0x100))
+                (byte) (yawkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkp) * 100000) >> 24), (byte) ((int) (Math.abs(yawkp) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(yawkp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkp) * 100000) % (0x100)),
+                (byte) (yawki < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawki) * 100000) >> 24), (byte) ((int) (Math.abs(yawki) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(yawki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawki) * 100000) % (0x100)),
+                (byte) (yawkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkd) * 100000) >> 24), (byte) ((int) (Math.abs(yawkd) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(yawkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkd) * 100000) % (0x100)),
+                (byte) (pitchkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchkp) * 100000) >> 24), (byte) ((int) (Math.abs(pitchkp) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(pitchkp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(pitchkp) * 100000) % (0x100)),
+                (byte) (pitchki < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchki) * 100000) >> 24), (byte) ((int) (Math.abs(pitchki) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(pitchki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(pitchki) * 100000) % (0x100)),
+                (byte) (pitchkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchkd) * 100000) >> 24), (byte) ((int) (Math.abs(pitchkd) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(pitchkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(pitchkd) * 100000) % (0x100))
         };
         send(toSend);
         return text;

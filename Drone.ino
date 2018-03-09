@@ -70,6 +70,8 @@ double XAxis = 0;
 double YAxis = 0;
 double RXAxis = 0;
 double RYAxis = 0;
+boolean RTrig = false;
+boolean LTrig = false;
 int POVXAxis = 0;
 int POVYAxis = 0;
 long lastCommandTime = 0;
@@ -117,17 +119,16 @@ void loop() {
 }
 
 void send(byte toSend[]) {
-  int origSize = sizeof(toSend);
   byte header[1];
   byte checksum[1];
   header[0] = toSend[0];
   checksum[0] = calculateChecksum(toSend);
   Serial.write(header, 1);
   Serial.write(checksum, 1);
-  byte headerless[origSize-1];
-  for (int i = 1; i < origSize; i++)  //take out first byte
+  byte headerless[sizeof(toSend) -1];
+  for (int i = 1; i < sizeof(toSend); i++)  //take out first byte
       headerless[i - 1] = toSend[i];
-  Serial.write(headerless, origSize-1);
+  Serial.write(headerless, sizeof(toSend) -1);
   Serial.flush();
 }
 
@@ -185,10 +186,23 @@ void receiveCommands() {
     calibrateMPU();
     return;
   }
-  if(command == 0x3) //motor testing
+  if(command == 0x2) //set joystick values
+  {
+    byte holder[5];
+    Serial.readBytes(holder, 5);
+    if(calculateChecksum(holder) != checksum[0]) return;
+    enabled = true;
+    enable();
+    YAxis = holder[0];
+    RYAxis = holder[1];
+    RXAxis = holder[2];
+    RTrig = holder[3] == 0 ? false : true;
+    LTrig = holder[4] == 0 ? false : true;
+  }
+  if(command == 0x3) //set motor testing
   {
     byte holder[4];
-    Serial.readBytes(holder, 4);
+	Serial.readBytes(holder, 4);
     if(calculateChecksum(holder) != checksum[0]) return;
     enabled = false;
     disable();
@@ -207,55 +221,49 @@ void receiveCommands() {
     setSpeedBL(speedBL);
     setSpeedBR(speedBR);
   }
-  if(command.equals("3"))
+  if(command == 0x4) //set PID constants
   {
-//      return;
-    index = received.indexOf(":");
-    yawkp = (received.substring(0, index)).toFloat();
-    received = received.substring(index+1);
-    index = received.indexOf(":");
-    yawki = (received.substring(0, index)).toFloat();
-    received = received.substring(index+1);
-    index = received.indexOf(":");
-    yawkd = (received.substring(0, index)).toFloat();
-    received = received.substring(index+1);
-    index = received.indexOf(":");
-    pitchkp = (received.substring(0, index)).toFloat();
-    received = received.substring(index+1);
-    index = received.indexOf(":");
-    pitchki = (received.substring(0, index)).toFloat();
-    received = received.substring(index+1);
-    index = received.indexOf(":");
-    pitchkd = (received.substring(0, index)).toFloat();
-    received = received.substring(index+1);
-    index = received.indexOf(":");
-    rollkp = (received.substring(0, index)).toFloat();
-    received = received.substring(index+1);
-    index = received.indexOf(":");
-    rollki = (received.substring(0, index)).toFloat();
-    received = received.substring(index+1);
-    rollkd = (received.substring(0)).toFloat();
+    byte holder[30];
+    Serial.readBytes(holder, 30);
+    if(calculateChecksum(holder) != checksum[0]) return;
+    double yawkp_sign = holder[0] == 0 ? 1 : -1;
+    double yawkp_1 = (holder[1]<<24)/100000.;
+    double yawkp_2 = (holder[2]<<16)/100000.;
+    double yawkp_3 = (holder[3]<<8)/100000.;
+    double yawkp_4 = (holder[4]<<0)/100000.;
+    yawkp = yawkp_sign*(yawkp_1 + yawkp_2 + yawkp_3 + yawkp_4);
+    double yawki_sign = holder[5] == 0 ? 1 : -1;
+    double yawki_1 = (holder[6]<<24)/100000.;
+    double yawki_2 = (holder[7]<<16)/100000.;
+    double yawki_3 = (holder[8]<<8)/100000.;
+    double yawki_4 = (holder[9]<<0)/100000.;
+    yawki = yawki_sign*(yawki_1 + yawki_2 + yawki_3 + yawki_4);
+    double yawkd_sign = holder[10] == 0 ? 1 : -1;
+    double yawkd_1 = (holder[11]<<24)/100000.;
+    double yawkd_2 = (holder[12]<<16)/100000.;
+    double yawkd_3 = (holder[13]<<8)/100000.;
+    double yawkd_4 = (holder[14]<<0)/100000.;
+    yawkd = yawkd_sign*(yawkd_1 + yawkd_2 + yawkd_3 + yawkd_4);
+    double pitchkp_sign = holder[15] == 0 ? 1 : -1;
+    double pitchkp_1 = (holder[16]<<24)/100000.;
+    double pitchkp_2 = (holder[17]<<16)/100000.;
+    double pitchkp_3 = (holder[18]<<8)/100000.;
+    double pitchkp_4 = (holder[19]<<0)/100000.;
+    pitchkp = pitchkp_sign*(pitchkp_1 + pitchkp_2 + pitchkp_3 + pitchkp_4);
+    double pitchki_sign = holder[20] == 0 ? 1 : -1;
+    double pitchki_1 = (holder[21]<<24)/100000.;
+    double pitchki_2 = (holder[22]<<16)/100000.;
+    double pitchki_3 = (holder[23]<<8)/100000.;
+    double pitchki_4 = (holder[24]<<0)/100000.;
+    pitchki = pitchki_sign*(pitchki_1 + pitchki_2 + pitchki_3 + pitchki_4);
+    double pitchkd_sign = holder[25] == 0 ? 1 : -1;
+    double pitchkd_1 = (holder[26]<<24)/100000.;
+    double pitchkd_2 = (holder[27]<<16)/100000.;
+    double pitchkd_3 = (holder[28]<<8)/100000.;
+    double pitchkd_4 = (holder[29]<<0)/100000.;
+    pitchkd = pitchkd_sign*(pitchkd_1 + pitchkd_2 + pitchkd_3 + pitchkd_4);
     String toReturn = "";
     String space = " ";
-    toReturn = yawkp+space+yawki+space+yawkd+space+pitchkp+space+pitchki+space+pitchkd+space+rollkp+space+rollki+space+rollkd;
-    sendConsole(toReturn);
-  }
-  if(command.equals("4"))
-  {
-    enabled = true;
-    index = received.indexOf(":");
-    YAxis = received.substring(0, index).toFloat();
-    received = received.substring(index+1);
-    index = received.indexOf(":");
-    RXAxis = received.substring(0, index).toFloat();
-    received = received.substring(index+1);
-    index = received.indexOf(":");
-    RYAxis = received.substring(0, index).toFloat();
-    received = received.substring(index+1);
-    index = received.indexOf(":");
-    POVXAxis = received.substring(0, index).toInt();
-    received = received.substring(index+1);
-    POVYAxis = received.substring(0, index).toInt();
   }
 }
 //---------------------------------------------------------------------------------------
