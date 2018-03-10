@@ -547,7 +547,7 @@ public class DriverStation
         {
             byte[] packet = concatenate(toSend, new byte[]{calculateChecksum(toSend)});
             port.writeBytes(packet, packet.length);
-//            System.out.println("Sent: " + Arrays.toString(toSend));
+            System.out.println("Sent: " + Arrays.toString(toSend));
         } catch (Exception e)
         {
             if (errorReportLoopsCount++ == errorReportLoops)
@@ -557,13 +557,6 @@ public class DriverStation
                 e.printStackTrace();
             }
         }
-    }
-
-    private byte[] takeOutFirstByte(byte[] arr)
-    {
-        byte[] toReturn = new byte[arr.length - 1];
-        for (int i = 1; i < arr.length; i++) toReturn[i - 1] = arr[i];
-        return toReturn;
     }
 
     private byte calculateChecksum(byte[] arr)
@@ -582,7 +575,6 @@ public class DriverStation
             byte[] cmd = new byte[1];
             port.readBytes(cmd, 1);
             int command = unsign(cmd[0]);
-            System.out.println(command);
             if (command < 7 || command > 9) return;
             if (command == 9) //CURRENT MOTOR VALUES
             {
@@ -596,7 +588,6 @@ public class DriverStation
                     flush();
                     return;
                 }
-//                System.out.println(Byte.toString(command));
                 M0.setText("M0: " + motorValues[0]);
                 M1.setText("M1: " + motorValues[1]);
                 M2.setText("M2: " + motorValues[2]);
@@ -626,7 +617,6 @@ public class DriverStation
                 byte[] checkSum = new byte[1];
                 port.readBytes(checkSum, 1);
                 byte calculatedChecksum = (byte) (cmd[0] + calculateChecksum(strArr) + size);
-                System.out.println(checkSum[0]);
                 if (calculatedChecksum != checkSum[0])
                 {
                     flush();
@@ -888,6 +878,7 @@ public class DriverStation
                 (byte) (pitchkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchkd) * 100000) >> 24), (byte) ((int) (Math.abs(pitchkd) * 100000) >> 16 % (0x1000000)),
                 (byte) ((int) (Math.abs(pitchkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(pitchkd) * 100000) % (0x100))
         };
+        System.out.println(toSend[2]);
         send(toSend);
         return text;
     }

@@ -172,7 +172,7 @@ void receiveCommands() {
   byte cmd[1];
   Serial.readBytes(cmd, 1);
   byte command = cmd[0];
-  if(command > 0) lastCommandTime = millis();
+  if(command >= 0 && command < 5) lastCommandTime = millis();
   if(command == 0x0) //enable / disable
   {
     byte holder[1];
@@ -263,47 +263,50 @@ void receiveCommands() {
 	byte calculatedChecksum = calculateChecksum(holder, 30) + command;
 	if (calculatedChecksum != checksum[0])
 	{
+		sendConsole("oh no");
 		Serial.flush();
 		return;
 	}
-    double yawkp_sign = holder[0] == 0 ? 1 : -1;
-    double yawkp_1 = (holder[1]<<24)/100000.;
-    double yawkp_2 = (holder[2]<<16)/100000.;
-    double yawkp_3 = (holder[3]<<8)/100000.;
-    double yawkp_4 = (holder[4]<<0)/100000.;
-    yawkp = yawkp_sign*(yawkp_1 + yawkp_2 + yawkp_3 + yawkp_4);
-    double yawki_sign = holder[5] == 0 ? 1 : -1;
-    double yawki_1 = (holder[6]<<24)/100000.;
-    double yawki_2 = (holder[7]<<16)/100000.;
-    double yawki_3 = (holder[8]<<8)/100000.;
-    double yawki_4 = (holder[9]<<0)/100000.;
-    yawki = yawki_sign*(yawki_1 + yawki_2 + yawki_3 + yawki_4);
-    double yawkd_sign = holder[10] == 0 ? 1 : -1;
-    double yawkd_1 = (holder[11]<<24)/100000.;
-    double yawkd_2 = (holder[12]<<16)/100000.;
-    double yawkd_3 = (holder[13]<<8)/100000.;
-    double yawkd_4 = (holder[14]<<0)/100000.;
-    yawkd = yawkd_sign*(yawkd_1 + yawkd_2 + yawkd_3 + yawkd_4);
-    double pitchkp_sign = holder[15] == 0 ? 1 : -1;
-    double pitchkp_1 = (holder[16]<<24)/100000.;
-    double pitchkp_2 = (holder[17]<<16)/100000.;
-    double pitchkp_3 = (holder[18]<<8)/100000.;
-    double pitchkp_4 = (holder[19]<<0)/100000.;
-    pitchkp = pitchkp_sign*(pitchkp_1 + pitchkp_2 + pitchkp_3 + pitchkp_4);
-    double pitchki_sign = holder[20] == 0 ? 1 : -1;
-    double pitchki_1 = (holder[21]<<24)/100000.;
-    double pitchki_2 = (holder[22]<<16)/100000.;
-    double pitchki_3 = (holder[23]<<8)/100000.;
-    double pitchki_4 = (holder[24]<<0)/100000.;
-    pitchki = pitchki_sign*(pitchki_1 + pitchki_2 + pitchki_3 + pitchki_4);
-    double pitchkd_sign = holder[25] == 0 ? 1 : -1;
-    double pitchkd_1 = (holder[26]<<24)/100000.;
-    double pitchkd_2 = (holder[27]<<16)/100000.;
-    double pitchkd_3 = (holder[28]<<8)/100000.;
-    double pitchkd_4 = (holder[29]<<0)/100000.;
-    pitchkd = pitchkd_sign*(pitchkd_1 + pitchkd_2 + pitchkd_3 + pitchkd_4);
-    String toReturn = "";
-    String space = " ";
+	
+	long yawkp_sign = holder[0] == 0 ? 1 : -1;
+	long yawkp_1 = ((long)holder[1]<<24);
+	long yawkp_2 = ((long)holder[2]<<16);
+	long yawkp_3 = ((long)holder[3]<<8);
+	long yawkp_4 = ((long)holder[4]<<0);
+    yawkp = yawkp_sign*(yawkp_1 + yawkp_2 + yawkp_3 + yawkp_4) / 100000.;
+	long yawki_sign = holder[5] == 0 ? 1 : -1;
+	long yawki_1 = ((long)holder[6]<<24);
+	long yawki_2 = ((long)holder[7]<<16);
+	long yawki_3 = ((long)holder[8]<<8);
+	long yawki_4 = ((long)holder[9]<<0);
+    yawki = yawki_sign*(yawki_1 + yawki_2 + yawki_3 + yawki_4) / 100000.;
+	long yawkd_sign = holder[10] == 0 ? 1 : -1;
+	long yawkd_1 = ((long)holder[11]<<24);
+	long yawkd_2 = ((long)holder[12]<<16);
+	long yawkd_3 = ((long)holder[13]<<8);
+	long yawkd_4 = ((long)holder[14]<<0);
+    yawkd = yawkd_sign*(yawkd_1 + yawkd_2 + yawkd_3 + yawkd_4) / 100000.;
+	long pitchkp_sign = holder[15] == 0 ? 1 : -1;
+	long pitchkp_1 = ((long)holder[16]<<24);
+	long pitchkp_2 = ((long)holder[17]<<16);
+	long pitchkp_3 = ((long)holder[18]<<8);
+	long pitchkp_4 = ((long)holder[19]<<0);
+    pitchkp = pitchkp_sign*(pitchkp_1 + pitchkp_2 + pitchkp_3 + pitchkp_4) / 100000.;
+	long pitchki_sign = holder[20] == 0 ? 1 : -1;
+	long pitchki_1 = ((long)holder[21]<<24);
+	long pitchki_2 = ((long)holder[22]<<16);
+	long pitchki_3 = ((long)holder[23]<<8);
+	long pitchki_4 = ((long)holder[24]<<0);
+    pitchki = pitchki_sign*(pitchki_1 + pitchki_2 + pitchki_3 + pitchki_4) / 100000.;
+	long pitchkd_sign = holder[25] == 0 ? 1 : -1;
+	long pitchkd_1 = ((long)holder[26]<<24);
+	long pitchkd_2 = ((long)holder[27]<<16);
+	long pitchkd_3 = ((long)holder[28]<<8);
+	long pitchkd_4 = ((long)holder[29]<<0);
+    pitchkd = pitchkd_sign*(pitchkd_1 + pitchkd_2 + pitchkd_3 + pitchkd_4) / 100000.;
+    String toReturn;
+	toReturn = String((yawkp));
+	sendConsole(toReturn);
   }
 }
 //---------------------------------------------------------------------------------------
