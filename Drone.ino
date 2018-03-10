@@ -106,6 +106,7 @@ void setup() {
   setSpeedBR(0);
   delay(1000);
   lastCommandTime = millis();
+  lastSentTime = millis();
   mpuSetup();
 }
 
@@ -160,7 +161,7 @@ void sendUpdates()
 	if(millis() < lastSentTime + updateFrequency) return;
 	lastSentTime = millis();
 	byte motors[] = {0x9, (byte)currentMotor0, (byte)currentMotor1, (byte)currentMotor2, (byte)currentMotor3};
-	byte mpu[] = {0x8, (byte)17, (byte)currentPitch, (byte)currentRoll};
+	byte mpu[] = {0x8, (byte)currentPitch, (byte)currentPitch, (byte)currentRoll};
 	send(motors, 5);
 	send(mpu, 4);
 }
@@ -501,58 +502,55 @@ void setSpeedBR(double speed) {
 
 void mpuSetup()
 {
-  // join I2C bus (I2Cdev library doesn't do this automatically)
-    #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-        Wire.begin();
-        Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
-    #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-        Fastwire::setup(400, true);
-    #endif
+	// join I2C bus (I2Cdev library doesn't do this automatically)
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+	Wire.begin();
+	Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
+#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+	Fastwire::setup(400, true);
+#endif
+	// initialize device
+	mpu.initialize();
+	pinMode(INTERRUPT_PIN, INPUT);
 
-    // initialize device
-    mpu.initialize();
-    pinMode(INTERRUPT_PIN, INPUT);
+	// verify connection
+	sendConsole(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+	// load and configure the DMP
+	sendConsole(F("Initializing DMP..."));
+	devStatus = mpu.dmpInitialize();
+	// supply your own gyro offsets here, scaled for min sensitivity
+	mpu.setXAccelOffset(-4271);
+	mpu.setYAccelOffset(-1550);
+	mpu.setZAccelOffset(1912);
+	mpu.setXGyroOffset(-175);
+	mpu.setYGyroOffset(-64);
+	mpu.setZGyroOffset(-83);
+	// make sure it worked (returns 0 if so)
+	if (devStatus == 0) {
+		// turn on the DMP, now that it's ready
+		mpu.setDMPEnabled(true);
+		// enable Arduino interrupt detection
+		attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
+		mpuIntStatus = mpu.getIntStatus();
+		// set our DMP Ready flag so the main loop() function knows it's okay to use it
+		dmpReady = true;
 
-    // verify connection
-    sendConsole(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
-
-    // load and configure the DMP
-    sendConsole(F("Initializing DMP..."));
-    devStatus = mpu.dmpInitialize();
-
-    // supply your own gyro offsets here, scaled for min sensitivity
-    mpu.setXAccelOffset(-4271);
-    mpu.setYAccelOffset(-1550);
-    mpu.setZAccelOffset(1912);
-    mpu.setXGyroOffset(-175);
-    mpu.setYGyroOffset(-64);
-    mpu.setZGyroOffset(-83);
-
-    // make sure it worked (returns 0 if so)
-    if (devStatus == 0) {
-        // turn on the DMP, now that it's ready
-        mpu.setDMPEnabled(true);
-
-        // enable Arduino interrupt detection
-        attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
-        mpuIntStatus = mpu.getIntStatus();
-
-        // get expected DMP packet size for later comparison
-        packetSize = mpu.dmpGetFIFOPacketSize();
-    } else {
-        // ERROR!
-        // 1 = initial memory load failed
-        // 2 = DMP configuration updates failed
-        // (if it's going to break, usually the code will be 1)
-        sendConsole(F("DMP Initialization failed (code "));
-        sendConsole(""+devStatus);
-    }
+		// get expected DMP packet size for later comparison
+		packetSize = mpu.dmpGetFIFOPacketSize();
+	}	else {
+		// ERROR!
+		// 1 = initial memory load failed
+		// 2 = DMP configuration updates failed
+		// (if it's going to break, usually the code will be 1)
+		sendConsole(F("DMP Initialization failed (code "));
+		sendConsole("" + devStatus);
+	}
 }
 
 void mpuLoop()
 {
   if (!dmpReady) return;
-  while (!mpuInterrupt && fifoCount < packetSize) {}
+  //while (!mpuInterrupt && fifoCount < packetSize) {}
   mpuInterrupt = false;
     mpuIntStatus = mpu.getIntStatus();
 
@@ -581,15 +579,17 @@ void mpuLoop()
             mpu.dmpGetQuaternion(&q, fifoBuffer);
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-//            Serial.print("ypr\t");
-//            Serial.print(ypr[0] * 180/M_PI);
-//            Serial.print("\t");
-//            Serial.print(ypr[1] * 180/M_PI);
-//            Serial.print("\t");
-//            Serial.println(ypr[2] * 180/M_PI);
+            //Serial.print("ypr\t");
+            //Serial.print(ypr[0] * 180/M_PI);
+            //Serial.print("\t");
+            //Serial.print(ypr[1] * 180/M_PI);
+            //Serial.print("\t");
+            //Serial.println(ypr[2] * 180/M_PI);
             currentYaw = ypr[0] * 180/M_PI - yawOffset;
             currentPitch = ypr[1] * 180/M_PI - pitchOffset;
             currentRoll = ypr[2] * 180/M_PI - rollOffset;
+			
+
             
 //        #ifdef OUTPUT_READABLE_REALACCEL
 //            // display real acceleration, adjusted to remove gravity
