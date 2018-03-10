@@ -15,7 +15,7 @@
 TODO: make sure to flush after sending and receiving
 
 -----To Command Station-------
-[command][checksum][everything else]...
+[command][information][checksum]
 [9] current motor value     [FR, 0 to 100][FL, 0 to 100][BL, 0 to 100][BR, 0 to 100]
 [8] current MPU readings    [yaw, limited -100 to 100][pitch, limited -100 to 100][roll, limited -100 to 100]
 [7] number of msg bytes     [number of following bytes (UNSIGNED)][char][char][char]...

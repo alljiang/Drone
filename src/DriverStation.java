@@ -209,9 +209,9 @@ public class DriverStation
             pitchkp = Double.parseDouble(st.nextToken());
             pitchki = Double.parseDouble(st.nextToken());
             pitchkd = Double.parseDouble(st.nextToken());
-            rollkp = Double.parseDouble(st.nextToken());
-            rollki = Double.parseDouble(st.nextToken());
-            rollkd = Double.parseDouble(st.nextToken());
+            rollkp = pitchkp;
+            rollki = pitchki;
+            rollkd = pitchkp;
             CurrentYawP.setText(yawkp + "");
             CurrentYawI.setText(yawki + "");
             CurrentYawD.setText(yawkd + "");
@@ -545,12 +545,9 @@ public class DriverStation
         if (toSend.length == 0) return;
         try
         {
-            port.writeBytes(new byte[]{toSend[0]}, 1);
-            byte checksum = calculateChecksum(toSend);
-            port.writeBytes(new byte[]{checksum}, 1);
-            toSend = takeOutFirstByte(toSend);
-            port.writeBytes(toSend, toSend.length);
-            System.out.println("Sent: " + Arrays.toString(toSend));
+            byte[] packet = concatenate(toSend, new byte[]{calculateChecksum(toSend)});
+            port.writeBytes(packet, packet.length);
+//            System.out.println("Sent: " + Arrays.toString(toSend));
         } catch (Exception e)
         {
             if (errorReportLoopsCount++ == errorReportLoops)
@@ -571,14 +568,9 @@ public class DriverStation
 
     private byte calculateChecksum(byte[] arr)
     {
-        //ALWAYS SKIP FIRST VALUE
         byte sum = 0;
-        boolean first = true;
         for (byte b : arr)
-        {
-            if (first) continue;
             sum += b;
-        }
         return sum;
     }
 
@@ -589,37 +581,57 @@ public class DriverStation
             if (port.bytesAvailable() == 0) return;
             byte[] cmd = new byte[1];
             port.readBytes(cmd, 1);
-            byte[] checkSum = new byte[1];
-            port.readBytes(checkSum, 1);
-            if (cmd[0] == 9) //CURRENT MOTOR VALUES
+            int command = unsign(cmd[0]);
+            System.out.println(command);
+            if (command < 7 || command > 9) return;
+            if (command == 9) //CURRENT MOTOR VALUES
             {
                 byte[] motorValues = new byte[4];
                 port.readBytes(motorValues, 4);
-                if (calculateChecksum(motorValues) != checkSum[0])
+                byte[] checkSum = new byte[1];
+                port.readBytes(checkSum, 1);
+                byte calculatedChecksum = (byte) (calculateChecksum(motorValues) + command);
+                if (calculatedChecksum != checkSum[0])
                 {
-                    //flush
+                    flush();
+                    return;
                 }
+//                System.out.println(Byte.toString(command));
                 M0.setText("M0: " + motorValues[0]);
                 M1.setText("M1: " + motorValues[1]);
                 M2.setText("M2: " + motorValues[2]);
                 M3.setText("M3: " + motorValues[3]);
-            } else if (cmd[0] == 8)//CURRENT MPU READINGS
+            } else if (command == 8)//CURRENT MPU READINGS
             {
                 byte[] readings = new byte[3];
                 port.readBytes(readings, 3);
-                if (calculateChecksum(readings) != checkSum[0])
+                byte[] checkSum = new byte[1];
+                port.readBytes(checkSum, 1);
+                byte calculatedChecksum = (byte) (calculateChecksum(readings) + command);
+                if (calculatedChecksum != checkSum[0])
                 {
-                    //flush
+                    flush();
+                    return;
                 }
                 currentYaw.setText(readings[0] + "");
                 currentPitch.setText(readings[1] + "");
                 currentRoll.setText(readings[2] + "");
-            } else if (cmd[0] == 7) //MESSAGE INTO CONSOLE
+            } else if (command == 7) //MESSAGE INTO CONSOLE
             {
                 byte[] sizeSigned = new byte[1];
+                port.readBytes(sizeSigned, 1);
                 int size = unsign(sizeSigned[0]);
                 byte[] strArr = new byte[size];
                 port.readBytes(strArr, size);
+                byte[] checkSum = new byte[1];
+                port.readBytes(checkSum, 1);
+                byte calculatedChecksum = (byte) (cmd[0] + calculateChecksum(strArr) + size);
+                System.out.println(checkSum[0]);
+                if (calculatedChecksum != checkSum[0])
+                {
+                    flush();
+                    return;
+                }
                 String s = "";
                 for (byte b : strArr) s += (char) unsign(b);
                 printToConsole(s);
@@ -628,6 +640,12 @@ public class DriverStation
         {
             e.printStackTrace();
         }
+    }
+
+    private void flush()
+    {
+        int toFlush = port.bytesAvailable();
+        port.readBytes(new byte[toFlush], toFlush);
     }
 
     private byte[] concatenate(byte[] one, byte[] two)

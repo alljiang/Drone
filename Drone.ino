@@ -83,7 +83,7 @@ double currentMotor3 = 0;
 
 long lastSentTime = 0;
 long timeout = 200;
-long updateFrequency = 200;
+long updateFrequency = 100;
 
 boolean enabled = false;
 
@@ -118,21 +118,19 @@ void loop() {
   delay(.5);
 }
 
-void send(byte toSend[]) {
-  byte packet[sizeof(toSend)+1];
-  packet[0] = toSend[0];
-  for (int i = 1; i < sizeof(toSend); i++)
-	  packet[i + 1] = toSend[i];
-  packet[1] = cksum(packet + 2, sizeof(toSend)-1);
-  Serial.write(packet, sizeof(packet));
-  Serial.flush();
+void send(byte toSend[], int length) {
+	byte packet[length+1];
+	for(int i = 0; i < length; i++)
+		packet[i] = toSend[i];
+	packet[length] = calculateChecksum(packet, length);
+	Serial.write(packet, length+1);
+	Serial.flush();
 }
 
-byte calculateChecksum(byte arr[])
+byte calculateChecksum(byte arr[], int length)
 {
-    //ALWAYS SKIP FIRST VALUE
     byte sum = 0;
-    for(int i = 1; i < sizeof(arr); i++)
+    for(int i = 0; i < length; i++)
       sum += arr[i];
     return sum;
 }
@@ -140,14 +138,13 @@ byte calculateChecksum(byte arr[])
 
 void sendConsole(String s) 
 {
-  byte packet[s.length()+2];
-  for (int i = 0; i < s.length(); i++)
-	  packet[2 + i] = s.charAt(i);
-
-  packet[0] = 0x07;
-  packet[1] = cksum(packet + 2, sizeof(s));
-
-  Serial.write(packet, sizeof(packet));
+	int totalLength = s.length() + 2;
+	byte byt[s.length()+2];
+	byt[0] = 0x7;
+	byt[1] = s.length();
+	for (int i = 0; i < s.length(); i++)
+		byt[i + 2] = s.charAt(i);
+	send(byt, totalLength);
 }
 
 byte cksum(byte buffer[], int numToCal)
@@ -160,27 +157,33 @@ byte cksum(byte buffer[], int numToCal)
 
 void sendUpdates()
 {
-  if(millis() < lastSentTime + updateFrequency) return;
-  lastSentTime = millis();
-  byte motors[] = {0x9, (byte)currentMotor0, (byte)currentMotor1, (byte)currentMotor2, (byte)currentMotor3};
-  byte mpu[] = {0x8, (byte)currentYaw, (byte)currentPitch, (byte)currentRoll};
-  send(motors);
-  send(mpu);
+	if(millis() < lastSentTime + updateFrequency) return;
+	lastSentTime = millis();
+	byte motors[] = {0x9, (byte)currentMotor0, (byte)currentMotor1, (byte)currentMotor2, (byte)currentMotor3};
+	byte mpu[] = {0x8, (byte)17, (byte)currentPitch, (byte)currentRoll};
+	send(motors, 5);
+	send(mpu, 4);
 }
 
 //---------------------------------------------------------------------------------------
 void receiveCommands() {
-  byte header[1];
-  byte checksum[1];
-  Serial.readBytes(header, 1);
-  byte command = header[0];
+  if (Serial.available() == 0) return;
+  byte cmd[1];
+  Serial.readBytes(cmd, 1);
+  byte command = cmd[0];
   if(command > 0) lastCommandTime = millis();
-  Serial.readBytes(checksum, 1);
   if(command == 0x0) //enable / disable
   {
     byte holder[1];
     Serial.readBytes(holder, 1);
-    if(calculateChecksum(holder) != checksum[0]) return;
+	byte checksum[1];
+	Serial.readBytes(checksum, 1);
+	byte calculatedChecksum = holder[0] + command;
+	if (calculatedChecksum != checksum[0])
+	{
+		Serial.flush();
+		return;
+	}
     if(holder[0] == 0x0) disable();
     else if(holder[0] == 0x1) enable();
     return;
@@ -189,7 +192,14 @@ void receiveCommands() {
   {
     byte holder[2];
     Serial.readBytes(holder, 2);
-    if(calculateChecksum(holder) != checksum[0]) return;
+	byte checksum[1];
+	Serial.readBytes(checksum, 1);
+	byte calculatedChecksum = calculateChecksum(holder, 2) + command;
+	if (calculatedChecksum != checksum[0])
+	{
+		Serial.flush();
+		return;
+	}
     digitalWrite(4, LOW);
     calibrateMPU();
     return;
@@ -198,7 +208,14 @@ void receiveCommands() {
   {
     byte holder[5];
     Serial.readBytes(holder, 5);
-    if(calculateChecksum(holder) != checksum[0]) return;
+	byte checksum[1];
+	Serial.readBytes(checksum, 1);
+	byte calculatedChecksum = calculateChecksum(holder, 5) + command;
+	if (calculatedChecksum != checksum[0])
+	{
+		Serial.flush();
+		return;
+	};
     enabled = true;
     enable();
     YAxis = holder[0];
@@ -211,7 +228,14 @@ void receiveCommands() {
   {
     byte holder[4];
 	Serial.readBytes(holder, 4);
-    if(calculateChecksum(holder) != checksum[0]) return;
+	byte checksum[1];
+	Serial.readBytes(checksum, 1);
+	byte calculatedChecksum = calculateChecksum(holder, 4) + command;
+	if (calculatedChecksum != checksum[0])
+	{
+		Serial.flush();
+		return;
+	}
     enabled = false;
     disable();
     XAxis = 0;
@@ -233,7 +257,14 @@ void receiveCommands() {
   {
     byte holder[30];
     Serial.readBytes(holder, 30);
-    if(calculateChecksum(holder) != checksum[0]) return;
+	byte checksum[1];
+	Serial.readBytes(checksum, 1);
+	byte calculatedChecksum = calculateChecksum(holder, 30) + command;
+	if (calculatedChecksum != checksum[0])
+	{
+		Serial.flush();
+		return;
+	}
     double yawkp_sign = holder[0] == 0 ? 1 : -1;
     double yawkp_1 = (holder[1]<<24)/100000.;
     double yawkp_2 = (holder[2]<<16)/100000.;
@@ -284,6 +315,9 @@ void enable() {
   lastErrorYaw = currentYaw;
   lastErrorPitch = currentPitch;
   lastErrorRoll = currentRoll;
+  lastYaw = currentYaw;
+  lastPitch = currentPitch;
+  lastRoll = currentRoll;
   lastTime = millis();
   enabled = true;
   setSpeedFR(0);  
@@ -308,7 +342,6 @@ void updateGyroValues() {
 }
 
 void drive() {
-
   expectedPitch = map(RYAxis, -100, 100, 7, -7);
   expectedRoll = map(RXAxis, -100, 100, -7, 7);
   double changeInTime = millis() - lastTime;
@@ -476,16 +509,6 @@ void mpuSetup()
         Fastwire::setup(400, true);
     #endif
 
-    // initialize serial communication
-    // (115200 chosen because it is required for Teapot Demo output, but it's
-    // really up to you depending on your project)
-
-    // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3V or Arduino
-    // Pro Mini running at 3.3V, cannot handle this baud rate reliably due to
-    // the baud timing being too misaligned with processor ticks. You must use
-    // 38400 or slower in these cases, or use some kind of external separate
-    // crystal solution for the UART timer.
-
     // initialize device
     mpu.initialize();
     pinMode(INTERRUPT_PIN, INPUT);
@@ -513,9 +536,6 @@ void mpuSetup()
         // enable Arduino interrupt detection
         attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
         mpuIntStatus = mpu.getIntStatus();
-
-        // set our DMP Ready flag so the main loop() function knows it's okay to use it
-        dmpReady = true;
 
         // get expected DMP packet size for later comparison
         packetSize = mpu.dmpGetFIFOPacketSize();
@@ -556,31 +576,6 @@ void mpuLoop()
         // track FIFO count here in case there is > 1 packet available
         // (this lets us immediately read more without waiting for an interrupt)
         fifoCount -= packetSize;
-
-//        #ifdef OUTPUT_READABLE_QUATERNION
-//            // display quaternion values in easy matrix form: w x y z
-//            mpu.dmpGetQuaternion(&q, fifoBuffer);
-//            Serial.print("quat\t");
-//            Serial.print(q.w);
-//            Serial.print("\t");
-//            Serial.print(q.x);
-//            Serial.print("\t");
-//            Serial.print(q.y);
-//            Serial.print("\t");
-//            Serial.println(q.z);
-//        #endif
-//
-//        #ifdef OUTPUT_READABLE_EULER
-//            // display Euler angles in degrees
-//            mpu.dmpGetQuaternion(&q, fifoBuffer);
-//            mpu.dmpGetEuler(euler, &q);
-//            Serial.print("euler\t");
-//            Serial.print(euler[0] * 180/M_PI);
-//            Serial.print("\t");
-//            Serial.print(euler[1] * 180/M_PI);
-//            Serial.print("\t");
-//            Serial.println(euler[2] * 180/M_PI);
-//        #endif
 
         //GYRO READINGS
             mpu.dmpGetQuaternion(&q, fifoBuffer);
@@ -627,5 +622,3 @@ void mpuLoop()
 //        #endif
     }
 }
-
-
