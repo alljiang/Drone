@@ -38,9 +38,6 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 
 Servo ESCFR, ESCFL, ESCBL, ESCBR;
 
-float yawkp = 0;
-float yawki = 0;
-float yawkd = 0;
 float pitchkp = 7.0;
 float pitchki = 5.5;
 float pitchkd = 90;
@@ -166,7 +163,7 @@ void sendUpdates()
 	send(mpu, 4);
 }
 
-//---------------------------------------------------------------------------------------
+/*******************************************************************************************************/
 void receiveCommands() {
   if (Serial.available() == 0) return;
   byte cmd[1];
@@ -177,14 +174,14 @@ void receiveCommands() {
   {
     byte holder[1];
     Serial.readBytes(holder, 1);
-	byte checksum[1];
-	Serial.readBytes(checksum, 1);
-	byte calculatedChecksum = holder[0] + command;
-	if (calculatedChecksum != checksum[0])
-	{
-		Serial.flush();
-		return;
-	}
+	  byte checksum[1];
+	  Serial.readBytes(checksum, 1);
+	  byte calculatedChecksum = holder[0] + command;
+	  if (calculatedChecksum != checksum[0])
+	  {
+	  	Serial.flush();
+	  	return;
+	  }
     if(holder[0] == 0x0) disable();
     else if(holder[0] == 0x1) enable();
     return;
@@ -193,14 +190,14 @@ void receiveCommands() {
   {
     byte holder[2];
     Serial.readBytes(holder, 2);
-	byte checksum[1];
-	Serial.readBytes(checksum, 1);
-	byte calculatedChecksum = calculateChecksum(holder, 2) + command;
-	if (calculatedChecksum != checksum[0])
-	{
-		Serial.flush();
-		return;
-	}
+	  byte checksum[1];
+	  Serial.readBytes(checksum, 1);
+	  byte calculatedChecksum = calculateChecksum(holder, 2) + command;
+	  if (calculatedChecksum != checksum[0])
+	  {
+	  	Serial.flush();
+	  	return;
+	  }
     digitalWrite(4, LOW);
     calibrateMPU();
     return;
@@ -209,16 +206,16 @@ void receiveCommands() {
   {
     byte holder[5];
     Serial.readBytes(holder, 5);
-	byte checksum[1];
-	Serial.readBytes(checksum, 1);
-	byte calculatedChecksum = calculateChecksum(holder, 5) + command;
-	if (calculatedChecksum != checksum[0])
-	{
-		Serial.flush();
-		return;
-	};
-    enabled = true;
-    enable();
+	  byte checksum[1];
+	  Serial.readBytes(checksum, 1);
+	  byte calculatedChecksum = calculateChecksum(holder, 5) + command;
+	  if(calculatedChecksum != checksum[0])
+	  {
+	  	Serial.flush();
+	  	return;
+	  }
+    if(!enabled) {
+      enable();
     YAxis = holder[0];
     RYAxis = holder[1];
     RXAxis = holder[2];
@@ -228,17 +225,16 @@ void receiveCommands() {
   if(command == 0x3) //set motor testing
   {
     byte holder[4];
-	Serial.readBytes(holder, 4);
-	byte checksum[1];
-	Serial.readBytes(checksum, 1);
-	byte calculatedChecksum = calculateChecksum(holder, 4) + command;
-	if (calculatedChecksum != checksum[0])
-	{
-		Serial.flush();
-		return;
-	}
-    enabled = false;
-    disable();
+	  Serial.readBytes(holder, 4);
+	  byte checksum[1];
+	  Serial.readBytes(checksum, 1);
+	  byte calculatedChecksum = calculateChecksum(holder, 4) + command;
+	  if (calculatedChecksum != checksum[0]) {
+	  	Serial.flush();
+		  return;
+	  }
+    if(enabled)
+      disable();
     XAxis = 0;
     YAxis = 0;
     RXAxis = 0;
@@ -258,61 +254,64 @@ void receiveCommands() {
   {
     byte holder[30];
     Serial.readBytes(holder, 30);
-	byte checksum[1];
-	Serial.readBytes(checksum, 1);
-	byte calculatedChecksum = calculateChecksum(holder, 30) + command;
-	if (calculatedChecksum != checksum[0])
-	{
-		sendConsole("oh no");
-		Serial.flush();
-		return;
-	}
+	  byte checksum[1];
+	  Serial.readBytes(checksum, 1);
+	  byte calculatedChecksum = calculateChecksum(holder, 30) + command;
+	  if (calculatedChecksum != checksum[0])
+	  { 
+		  sendConsole("oh no");
+		  Serial.flush();
+		  return;
+	  }
 	
-	long yawkp_sign = holder[0] == 0 ? 1 : -1;
-	long yawkp_1 = ((long)holder[1]<<24);
-	long yawkp_2 = ((long)holder[2]<<16);
-	long yawkp_3 = ((long)holder[3]<<8);
-	long yawkp_4 = ((long)holder[4]<<0);
-    yawkp = yawkp_sign*(yawkp_1 + yawkp_2 + yawkp_3 + yawkp_4) / 100000.;
-	long yawki_sign = holder[5] == 0 ? 1 : -1;
-	long yawki_1 = ((long)holder[6]<<24);
-	long yawki_2 = ((long)holder[7]<<16);
-	long yawki_3 = ((long)holder[8]<<8);
-	long yawki_4 = ((long)holder[9]<<0);
-    yawki = yawki_sign*(yawki_1 + yawki_2 + yawki_3 + yawki_4) / 100000.;
-	long yawkd_sign = holder[10] == 0 ? 1 : -1;
-	long yawkd_1 = ((long)holder[11]<<24);
-	long yawkd_2 = ((long)holder[12]<<16);
-	long yawkd_3 = ((long)holder[13]<<8);
-	long yawkd_4 = ((long)holder[14]<<0);
-    yawkd = yawkd_sign*(yawkd_1 + yawkd_2 + yawkd_3 + yawkd_4) / 100000.;
-	long pitchkp_sign = holder[15] == 0 ? 1 : -1;
-	long pitchkp_1 = ((long)holder[16]<<24);
-	long pitchkp_2 = ((long)holder[17]<<16);
-	long pitchkp_3 = ((long)holder[18]<<8);
-	long pitchkp_4 = ((long)holder[19]<<0);
+	  long yawkp_sign = holder[0] == 0 ? 1 : -1;
+	  long yawkp_1 = ((long)holder[1]<<24);
+	  long yawkp_2 = ((long)holder[2]<<16);
+	  long yawkp_3 = ((long)holder[3]<<8);
+	  long yawkp_4 = ((long)holder[4]<<0);
+//    yawkp = yawkp_sign*(yawkp_1 + yawkp_2 + yawkp_3 + yawkp_4) / 100000.;
+    
+	  long yawki_sign = holder[5] == 0 ? 1 : -1;
+	  long yawki_1 = ((long)holder[6]<<24);
+	  long yawki_2 = ((long)holder[7]<<16);
+	  long yawki_3 = ((long)holder[8]<<8);
+	  long yawki_4 = ((long)holder[9]<<0);
+//    yawki = yawki_sign*(yawki_1 + yawki_2 + yawki_3 + yawki_4) / 100000.;
+    
+	  long yawkd_sign = holder[10] == 0 ? 1 : -1;
+	  long yawkd_1 = ((long)holder[11]<<24);
+	  long yawkd_2 = ((long)holder[12]<<16);
+	  long yawkd_3 = ((long)holder[13]<<8);
+	  long yawkd_4 = ((long)holder[14]<<0);
+//    yawkd = yawkd_sign*(yawkd_1 + yawkd_2 + yawkd_3 + yawkd_4) / 100000.;
+    
+	  long pitchkp_sign = holder[15] == 0 ? 1 : -1;
+	  long pitchkp_1 = ((long)holder[16]<<24);
+	  long pitchkp_2 = ((long)holder[17]<<16);
+	  long pitchkp_3 = ((long)holder[18]<<8);
+	  long pitchkp_4 = ((long)holder[19]<<0);
     pitchkp = pitchkp_sign*(pitchkp_1 + pitchkp_2 + pitchkp_3 + pitchkp_4) / 100000.;
-	long pitchki_sign = holder[20] == 0 ? 1 : -1;
-	long pitchki_1 = ((long)holder[21]<<24);
-	long pitchki_2 = ((long)holder[22]<<16);
-	long pitchki_3 = ((long)holder[23]<<8);
-	long pitchki_4 = ((long)holder[24]<<0);
+    
+	  long pitchki_sign = holder[20] == 0 ? 1 : -1;
+	  long pitchki_1 = ((long)holder[21]<<24);
+	  long pitchki_2 = ((long)holder[22]<<16);
+	  long pitchki_3 = ((long)holder[23]<<8);
+	  long pitchki_4 = ((long)holder[24]<<0);
     pitchki = pitchki_sign*(pitchki_1 + pitchki_2 + pitchki_3 + pitchki_4) / 100000.;
-	long pitchkd_sign = holder[25] == 0 ? 1 : -1;
-	long pitchkd_1 = ((long)holder[26]<<24);
-	long pitchkd_2 = ((long)holder[27]<<16);
-	long pitchkd_3 = ((long)holder[28]<<8);
-	long pitchkd_4 = ((long)holder[29]<<0);
+    
+	  long pitchkd_sign = holder[25] == 0 ? 1 : -1;
+	  long pitchkd_1 = ((long)holder[26]<<24);
+	  long pitchkd_2 = ((long)holder[27]<<16);
+	  long pitchkd_3 = ((long)holder[28]<<8);
+	  long pitchkd_4 = ((long)holder[29]<<0);
     pitchkd = pitchkd_sign*(pitchkd_1 + pitchkd_2 + pitchkd_3 + pitchkd_4) / 100000.;
-    String toReturn;
-	toReturn = String((yawkp));
-	sendConsole(toReturn);
+    
+	  sendConsole(String(pitchkp));
   }
 }
-//---------------------------------------------------------------------------------------
+/******************************************************************************************************/
 
 void enable() {
-
   IntegralYaw = 0;
   IntegralPitch = 0;
   IntegralRoll = 0;
@@ -331,7 +330,6 @@ void enable() {
 }
 
 void disable() {
-  
   enabled = false;  
   setSpeedFR(0);  
   setSpeedFL(0);
@@ -373,9 +371,6 @@ void drive() {
   if(YAxis == 0 || errorPitch < .3) IntegralPitch = 0;
   if(YAxis == 0 || errorRoll < .3) IntegralRoll = 0;
   
-//  double yawPIDOutput = yawkp * errorYaw + yawki * IntegralYaw - yawkd * changeErrorYaw / changeInTime;
-//  double pitchPIDOutput = pitchkp * errorPitch + pitchki * IntegralPitch - pitchkd * changeErrorPitch / changeInTime;
-//  double rollPIDOutput = rollkp * errorRoll + rollki * IntegralRoll - rollkd * changeErrorRoll / changeInTime;
   double yawPIDOutput = yawkp * errorYaw / 100. + yawki * IntegralYaw  / 1000.- yawkd * changeYaw / changeInTime;
   double pitchPIDOutput = pitchkp * errorPitch / 100. + pitchki * IntegralPitch / 1000. - pitchkd * changePitch / changeInTime;
   double rollPIDOutput = rollkp * errorRoll / 100. + rollki * IntegralRoll / 1000. - rollkd * changeRoll / changeInTime;
@@ -511,36 +506,45 @@ void mpuSetup()
 	Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
 	Fastwire::setup(400, true);
-#endif
+#endif
+
 	// initialize device
 	mpu.initialize();
 	pinMode(INTERRUPT_PIN, INPUT);
 
 	// verify connection
-	sendConsole(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+	sendConsole(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+
 	// load and configure the DMP
 	sendConsole(F("Initializing DMP..."));
-	devStatus = mpu.dmpInitialize();
+	devStatus = mpu.dmpInitialize();
+
 	// supply your own gyro offsets here, scaled for min sensitivity
 	mpu.setXAccelOffset(-4271);
 	mpu.setYAccelOffset(-1550);
 	mpu.setZAccelOffset(1912);
 	mpu.setXGyroOffset(-175);
 	mpu.setYGyroOffset(-64);
-	mpu.setZGyroOffset(-83);
+	mpu.setZGyroOffset(-83);
+
 	// make sure it worked (returns 0 if so)
-	if (devStatus == 0) {
+	if (devStatus == 0) {
+
 		// turn on the DMP, now that it's ready
-		mpu.setDMPEnabled(true);
-		// enable Arduino interrupt detection
+		mpu.setDMPEnabled(true);
+
+		// enable Arduino interrupt detection
+
 		attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
-		mpuIntStatus = mpu.getIntStatus();
+		mpuIntStatus = mpu.getIntStatus();
+
 		// set our DMP Ready flag so the main loop() function knows it's okay to use it
 		dmpReady = true;
 
 		// get expected DMP packet size for later comparison
 		packetSize = mpu.dmpGetFIFOPacketSize();
-	}	else {
+	}
+	else {
 		// ERROR!
 		// 1 = initial memory load failed
 		// 2 = DMP configuration updates failed
