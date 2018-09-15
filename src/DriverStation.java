@@ -156,9 +156,9 @@ public class DriverStation
                 String pp = PitchP.getText();
                 String pi = PitchI.getText();
                 String pd = PitchD.getText();
-                String rp = RollP.getText();
-                String ri = RollI.getText();
-                String rd = RollD.getText();
+                String rp = PitchP.getText();
+                String ri = PitchI.getText();
+                String rd = PitchD.getText();
                 if (yp.length() > 0) yawkp = Double.parseDouble(yp);
                 if (yi.length() > 0) yawki = Double.parseDouble(yi);
                 if (yd.length() > 0) yawkd = Double.parseDouble(yd);
@@ -464,7 +464,7 @@ public class DriverStation
                     while (true)
                     {
                         update();
-                        Thread.sleep(40);
+                        Thread.sleep(50);
                     }
                 } catch (Exception e)
                 {
@@ -481,7 +481,7 @@ public class DriverStation
                     while (true)
                     {
                         receive();
-                        Thread.sleep(50);
+                        Thread.sleep(20);
                     }
                 } catch (Exception e)
                 {
@@ -506,7 +506,9 @@ public class DriverStation
         MotorController1.setValue(0);
         MotorController2.setValue(0);
         MotorController3.setValue(0);
-        updatePID();
+        currentThrottle = 0;
+        lastUpdateTime = System.currentTimeMillis();
+        send(new byte[]{0, 1});
         send(new byte[]{3, 0, 0, 0, 0});
         pw.close();
         try
@@ -516,6 +518,7 @@ public class DriverStation
         {
             e.printStackTrace();
         }
+        System.out.println("enable");
     }
 
     private void disable()
@@ -532,12 +535,21 @@ public class DriverStation
         send(new byte[]{0, 0});
         pw.close();
         updateGraph();
+        System.out.println("disable");
+        currentThrottle = 0;
     }
+
+    double currentThrottle = 0;
+    long lastUpdateTime = 0;
 
     private void drive()
     {
-        send(new byte[]{0x2, (byte) Math.round(YAxisVal), (byte) Math.round(RYAxisVal),
-                (byte) Math.round(RXAxisVal), Btn6 ? (byte) 1 : (byte) 0, Btn7 ? (byte) 1 : (byte) 0});
+        long timeLength = System.currentTimeMillis() - lastUpdateTime;
+        double toChange = timeLength * YAxisVal / 180000.;
+        currentThrottle += toChange;
+        currentThrottle = Math.min(100, Math.max(0, currentThrottle));
+        System.out.println(currentThrottle);
+        send(new byte[]{0x2, (byte) currentThrottle, (byte) Math.round(RYAxisVal), (byte) Math.round(RXAxisVal), Btn6 ? (byte) 1 : (byte) 0, Btn7 ? (byte) 1 : (byte) 0});
     }
 
     int errorReportLoops = 5;
@@ -627,6 +639,11 @@ public class DriverStation
                 }
                 String s = "";
                 for (byte b : strArr) s += (char) unsign(b);
+                if (s.equals("PID"))
+                {
+//                    updatePID();
+                    return;
+                }
                 printToConsole(s);
             }
         } catch (Exception e)
@@ -701,9 +718,7 @@ public class DriverStation
             controllerWarningPanel.setBackground(new Color(0xff0007));
         else
             controllerWarningPanel.setBackground(new Color(0x3C3F41));
-        System.out.println(controller.getButtonCount());
-        if (controller.getButtonCount() > 10)
-            updateControllerButtons(controller);
+        if (controller.getButtonCount() == 13) updateControllerButtons(controller);
         POVXAxis.setValue((int) (controller.getPovX()));
         POVXVal = controller.getPovX();
         POVYAxis.setValue((int) (controller.getPovY() * -1));
@@ -739,11 +754,13 @@ public class DriverStation
         }
 
         if (droneEnabled) drive();
-        else //set motor values for disabled testing
+            //motor testing
+        else
         {
-            byte[] toSend = new byte[]{3, (byte) MotorController0.getValue(), (byte) MotorController1.getValue(),
+            byte[] toSend = new byte[]{0x3, (byte) MotorController0.getValue(), (byte) MotorController1.getValue(),
                     (byte) MotorController2.getValue(), (byte) MotorController3.getValue()};
             send(toSend);
+            System.out.println("motor testing");
         }
 
         if (Btn12) disable();
@@ -759,7 +776,6 @@ public class DriverStation
     {
         if (controller.isButtonPressed(0))
         {
-            System.out.println("asdf");
             Btn0 = true;
             BtnStatus0.setBackground(new Color(0x64ff00));
         } else
@@ -889,6 +905,7 @@ public class DriverStation
                 (byte) (kd < 0 ? 1 : 0), (byte) ((int) (Math.abs(kd) * 100000) >> 24), (byte) ((int) (Math.abs(kd) * 100000) >> 16 % (0x1000000)),
                 (byte) ((int) (Math.abs(kd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kd) * 100000) % (0x100))
         };
+//        System.out.println(toSend[2]);
         send(toSend);
         return text;
     }
