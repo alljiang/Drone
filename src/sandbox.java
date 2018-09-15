@@ -15,28 +15,45 @@ public class sandbox
 
     public static void main(String[] args)
     {
-        byte b = 6;
-        int a = 6;
-        System.out.println(a == b);
+        double kp = 100;
+        double ki = .03;
+        double kd = 1200;
+        byte[] holder = new byte[]{
+                (byte) (kp < 0 ? 1 : 0), (byte) ((int) (Math.abs(kp) * 100000) >> 24), (byte) ((int) (Math.abs(kp) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(kp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kp) * 100000) % (0x100)),
+                (byte) (ki < 0 ? 1 : 0), (byte) ((int) (Math.abs(ki) * 100000) >> 24), (byte) ((int) (Math.abs(ki) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(ki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(ki) * 100000) % (0x100)),
+                (byte) (kd < 0 ? 1 : 0), (byte) ((int) (Math.abs(kd) * 100000) >> 24), (byte) ((int) (Math.abs(kd) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(kd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kd) * 100000) % (0x100))
+        };
+        long kp_sign = unsign(holder[0]) == 0 ? 1 : -1;
+        long kp_1 = ((long)unsign(holder[1])<<24);
+        long kp_2 = ((long)unsign(holder[2])<<16);
+        long kp_3 = ((long)unsign(holder[3])<<8);
+        long kp_4 = ((long)unsign(holder[4])<<0);
+        kp = kp_sign*(kp_1 + kp_2 + kp_3 + kp_4) / 100000.;
+
+        long ki_sign = holder[5] == 0 ? 1 : -1;
+        long ki_1 = ((long)holder[6]<<24);
+        long ki_2 = ((long)holder[7]<<16);
+        long ki_3 = ((long)holder[8]<<8);
+        long ki_4 = ((long)holder[9]<<0);
+        ki = ki_sign*(ki_1 + ki_2 + ki_3 + ki_4) / 100000.;
+
+        long kd_sign = holder[10] == 0 ? 1 : -1;
+        long kd_1 = ((long)holder[11]<<24);
+        long kd_2 = ((long)holder[12]<<16);
+        long kd_3 = ((long)holder[13]<<8);
+        long kd_4 = ((long)holder[14]<<0);
+        kd = kd_sign*(kd_1 + kd_2 + kd_3 + kd_4) / 100000.;
+        System.out.println(kp);
+        System.out.println(ki);
+        System.out.println(kd);
     }
 
-    public static byte[] toBytes(double d)
+    public static int unsign(byte b)
     {
-        int rounded = (int)(d * 100000);
-        System.out.println(Integer.toHexString(rounded));
-        byte[] arr = {(byte)(rounded>>24),(byte)(rounded%(0x1000000)>>16),(byte)(rounded%(0x10000)>>8),(byte)(rounded%(0x100))};
-        return arr;
-    }
-
-    public static double toDouble(byte[] arr)
-    {
-        int sum = 0;
-        for(int i = 0; i < arr.length; i++)
-        {
-            int val = (arr[arr.length-1-i]) & 0xFF; //unsign
-            sum += val << (8 * i);
-        }
-        return sum/100000.;
+        return b & 0xFF;
     }
 
 }

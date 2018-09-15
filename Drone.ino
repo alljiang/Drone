@@ -38,12 +38,11 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 
 Servo ESCFR, ESCFL, ESCBL, ESCBR;
 
-float pitchkp = 7.0;
-float pitchki = 5.5;
-float pitchkd = 90;
-float rollkp = pitchkp;
-float rollki = pitchki;
-float rollkd = pitchkd;
+float kp = 7.0;
+float ki = 5.5;
+float kd = 90;
+float rollki = ki;
+float rollkd = kd;
 long lastTime = 0;
 double IntegralYaw = 0;
 double IntegralPitch = 0;
@@ -125,17 +124,14 @@ void send(byte toSend[], int length) {
 	Serial.flush();
 }
 
-byte calculateChecksum(byte arr[], int length)
-{
+byte calculateChecksum(byte arr[], int length) {
     byte sum = 0;
     for(int i = 0; i < length; i++)
       sum += arr[i];
     return sum;
 }
 
-
-void sendConsole(String s) 
-{
+void sendConsole(String s) {
 	int totalLength = s.length() + 2;
 	byte byt[s.length()+2];
 	byt[0] = 0x7;
@@ -145,16 +141,14 @@ void sendConsole(String s)
 	send(byt, totalLength);
 }
 
-byte cksum(byte buffer[], int numToCal)
-{
+byte cksum(byte buffer[], int numToCal) {
 	byte ck = 0;
 	for (int i = 0; i < numToCal; i++)
 		ck += buffer[i];
 	return ck;
 }
 
-void sendUpdates()
-{
+void sendUpdates() {
 	if(millis() < lastSentTime + updateFrequency) return;
 	lastSentTime = millis();
 	byte motors[] = {0x9, (byte)currentMotor0, (byte)currentMotor1, (byte)currentMotor2, (byte)currentMotor3};
@@ -169,7 +163,7 @@ void receiveCommands() {
   byte cmd[1];
   Serial.readBytes(cmd, 1);
   byte command = cmd[0];
-  if(command >= 0 && command < 5) lastCommandTime = millis();
+  if(command >= 0 && command < 6) lastCommandTime = millis();
   if(command == 0x0) //enable / disable
   {
     byte holder[1];
@@ -214,8 +208,7 @@ void receiveCommands() {
 	  	Serial.flush();
 	  	return;
 	  }
-    if(!enabled) {
-      enable();
+    if(!enabled) enable();
     YAxis = holder[0];
     RYAxis = holder[1];
     RXAxis = holder[2];
@@ -252,75 +245,68 @@ void receiveCommands() {
   }
   if(command == 0x4) //set PID constants
   {
-    byte holder[30];
-    Serial.readBytes(holder, 30);
+	  byte holder[15];
+	  Serial.readBytes(holder, 15);
 	  byte checksum[1];
 	  Serial.readBytes(checksum, 1);
-	  byte calculatedChecksum = calculateChecksum(holder, 30) + command;
+	  byte calculatedChecksum = calculateChecksum(holder, 15) + command;
 	  if (calculatedChecksum != checksum[0])
 	  { 
 		  sendConsole("oh no");
 		  Serial.flush();
 		  return;
 	  }
-	
-	  long yawkp_sign = holder[0] == 0 ? 1 : -1;
-	  long yawkp_1 = ((long)holder[1]<<24);
-	  long yawkp_2 = ((long)holder[2]<<16);
-	  long yawkp_3 = ((long)holder[3]<<8);
-	  long yawkp_4 = ((long)holder[4]<<0);
-//    yawkp = yawkp_sign*(yawkp_1 + yawkp_2 + yawkp_3 + yawkp_4) / 100000.;
     
-	  long yawki_sign = holder[5] == 0 ? 1 : -1;
-	  long yawki_1 = ((long)holder[6]<<24);
-	  long yawki_2 = ((long)holder[7]<<16);
-	  long yawki_3 = ((long)holder[8]<<8);
-	  long yawki_4 = ((long)holder[9]<<0);
-//    yawki = yawki_sign*(yawki_1 + yawki_2 + yawki_3 + yawki_4) / 100000.;
+	  long kp_sign = holder[0] == 0 ? 1 : -1;
+	  long kp_1 = ((long)holder[1]<<24);
+	  long kp_2 = ((long)holder[2]<<16);
+	  long kp_3 = ((long)holder[3]<<8);
+	  long kp_4 = ((long)holder[4]<<0);
+    kp = kp_sign*(kp_1 + kp_2 + kp_3 + kp_4) / 100000.;
     
-	  long yawkd_sign = holder[10] == 0 ? 1 : -1;
-	  long yawkd_1 = ((long)holder[11]<<24);
-	  long yawkd_2 = ((long)holder[12]<<16);
-	  long yawkd_3 = ((long)holder[13]<<8);
-	  long yawkd_4 = ((long)holder[14]<<0);
-//    yawkd = yawkd_sign*(yawkd_1 + yawkd_2 + yawkd_3 + yawkd_4) / 100000.;
+	  long ki_sign = holder[5] == 0 ? 1 : -1;
+	  long ki_1 = ((long)holder[6]<<24);
+	  long ki_2 = ((long)holder[7]<<16);
+	  long ki_3 = ((long)holder[8]<<8);
+	  long ki_4 = ((long)holder[9]<<0);
+    ki = ki_sign*(ki_1 + ki_2 + ki_3 + ki_4) / 100000.;
     
-	  long pitchkp_sign = holder[15] == 0 ? 1 : -1;
-	  long pitchkp_1 = ((long)holder[16]<<24);
-	  long pitchkp_2 = ((long)holder[17]<<16);
-	  long pitchkp_3 = ((long)holder[18]<<8);
-	  long pitchkp_4 = ((long)holder[19]<<0);
-    pitchkp = pitchkp_sign*(pitchkp_1 + pitchkp_2 + pitchkp_3 + pitchkp_4) / 100000.;
+	  long kd_sign = holder[10] == 0 ? 1 : -1;
+	  long kd_1 = ((long)holder[11]<<24);
+	  long kd_2 = ((long)holder[12]<<16);
+	  long kd_3 = ((long)holder[13]<<8);
+	  long kd_4 = ((long)holder[14]<<0);
+    kd = kd_sign*(kd_1 + kd_2 + kd_3 + kd_4) / 100000.;
     
-	  long pitchki_sign = holder[20] == 0 ? 1 : -1;
-	  long pitchki_1 = ((long)holder[21]<<24);
-	  long pitchki_2 = ((long)holder[22]<<16);
-	  long pitchki_3 = ((long)holder[23]<<8);
-	  long pitchki_4 = ((long)holder[24]<<0);
-    pitchki = pitchki_sign*(pitchki_1 + pitchki_2 + pitchki_3 + pitchki_4) / 100000.;
-    
-	  long pitchkd_sign = holder[25] == 0 ? 1 : -1;
-	  long pitchkd_1 = ((long)holder[26]<<24);
-	  long pitchkd_2 = ((long)holder[27]<<16);
-	  long pitchkd_3 = ((long)holder[28]<<8);
-	  long pitchkd_4 = ((long)holder[29]<<0);
-    pitchkd = pitchkd_sign*(pitchkd_1 + pitchkd_2 + pitchkd_3 + pitchkd_4) / 100000.;
-    
-	  sendConsole(String(pitchkp));
+	  sendConsole(String(kp));
+  }
+  if(command == 0x5) //set trim
+  {
+    byte holder[1];
+    Serial.readBytes(holder, 1);
+    byte checksum[1];
+    Serial.readBytes(checksum, 1);
+    byte calculatedChecksum = calculateChecksum(holder, 1) + command;
+    if (calculatedChecksum != checksum[0]) {
+      Serial.flush();
+      return;
+    }
+    if(holder[0] == 0) pitchOffset -= .2;
+    else if(holder[0] == 1) rollOffset -= .2;
+    else if(holder[0] == 2) pitchOffset += .2;
+    else if(holder[0] == 3) rollOffset += .2;
+    sendConsole(String(holder[0]));
   }
 }
 /******************************************************************************************************/
 
 void enable() {
-  IntegralYaw = 0;
+//  IntegralYaw = 0;
+//  lastErrorYaw = currentYaw;
+//  lastYaw = currentYaw;
   IntegralPitch = 0;
-  IntegralRoll = 0;
-  lastErrorYaw = currentYaw;
   lastErrorPitch = currentPitch;
-  lastErrorRoll = currentRoll;
-  lastYaw = currentYaw;
   lastPitch = currentPitch;
-  lastRoll = currentRoll;
   lastTime = millis();
   enabled = true;
   setSpeedFR(0);  
@@ -337,78 +323,58 @@ void disable() {
   setSpeedBR(0);
 }
 
-void updateGyroValues() {
-  yawOffset += currentYaw;  
-  pitchOffset += currentPitch;
-  rollOffset += currentRoll;
-}
-
 void drive() {
-  expectedPitch = map(RYAxis, -100, 100, 7, -7);
-  expectedRoll = map(RXAxis, -100, 100, -7, 7);
+  expectedPitch = map(RYAxis, -100, 100, 5, -5);
   double changeInTime = millis() - lastTime;
-  double errorYaw = currentYaw - expectedYaw;
   double errorPitch = currentPitch - expectedPitch;
-  double errorRoll = currentRoll - expectedRoll;
-  boolean flipYaw = errorYaw < 0;
   boolean flipPitch = errorPitch < 0;
-  boolean flipRoll = errorRoll < 0;
-  errorYaw = abs(errorYaw);
   errorPitch = abs(errorPitch);
-  errorRoll = abs(errorRoll);
-  double changeErrorYaw = errorYaw - lastErrorYaw;
   double changeErrorPitch = errorPitch - lastErrorPitch;
-  double changeErrorRoll = errorRoll - lastErrorRoll;
-  double changeYaw = currentYaw - lastYaw;
   double changePitch = currentPitch - lastPitch;
-  double changeRoll = currentRoll - lastRoll;
   changeErrorPitch = -changeErrorPitch;
-  changeErrorRoll = -changeErrorRoll;
   changePitch = -changePitch;
-  changeRoll = -changeRoll;
-
-  if(errorYaw < .3) IntegralYaw = 0;
-  if(YAxis == 0 || errorPitch < .3) IntegralPitch = 0;
-  if(YAxis == 0 || errorRoll < .3) IntegralRoll = 0;
   
-  double yawPIDOutput = yawkp * errorYaw / 100. + yawki * IntegralYaw  / 1000.- yawkd * changeYaw / changeInTime;
-  double pitchPIDOutput = pitchkp * errorPitch / 100. + pitchki * IntegralPitch / 1000. - pitchkd * changePitch / changeInTime;
-  double rollPIDOutput = rollkp * errorRoll / 100. + rollki * IntegralRoll / 1000. - rollkd * changeRoll / changeInTime;
+  double pitchPIDOutput = kp * errorPitch / 100. + ki * IntegralPitch / 1000. - kd * changePitch / changeInTime;
  
   if(pitchPIDOutput > maxPitchPID) pitchPIDOutput = maxPitchPID;
-  if(rollPIDOutput > maxPitchPID) rollPIDOutput = maxPitchPID;
   if(pitchPIDOutput < -maxPitchPID) pitchPIDOutput = -maxPitchPID;
-  if(rollPIDOutput < -maxPitchPID) rollPIDOutput = -maxPitchPID;
   
   lastTime = millis();
-  lastErrorYaw = errorYaw;
   lastErrorPitch = errorPitch;
-  lastErrorRoll = errorRoll;
-  lastYaw = currentYaw;
   lastPitch = currentPitch;
-  lastRoll = currentRoll;
-  IntegralYaw += errorYaw;
   IntegralPitch += errorPitch;
-  IntegralRoll += errorRoll;
 
   double FROutput = YAxis;
   double FLOutput = YAxis;
   double BLOutput = YAxis;
   double BROutput = YAxis;
 
+//  double errorYaw = currentYaw - expectedYaw;
+//  boolean flipYaw = errorYaw < 0;
+//  errorYaw = abs(errorYaw);
+//  double changeErrorYaw = errorYaw - lastErrorYaw;
+//  double changeYaw = currentYaw - lastYaw;
+//  if(errorYaw < .3) IntegralYaw = 0;
+//  if(YAxis == 0 || errorPitch < .3) IntegralPitch = 0;
+//  double yawPIDOutput = yawkp * errorYaw / 100. + yawki * IntegralYaw  / 1000.- yawkd * changeYaw / changeInTime;
+//  lastErrorYaw = errorYaw;
+//  lastYaw = currentYaw;
+//  IntegralYaw += errorYaw;
+
   //FLIP THESE VALUES IF YOU NEED TO BASED ON THE GYRO
-  if(flipYaw) {
-    FROutput += -yawPIDOutput;
-    FLOutput += yawPIDOutput;
-    BLOutput += -yawPIDOutput;
-    BROutput += yawPIDOutput;
-  }
-  else {
-    FROutput += yawPIDOutput;
-    FLOutput += -yawPIDOutput;
-    BLOutput += yawPIDOutput;
-    BROutput += -yawPIDOutput;
-  }
+//  if(flipYaw) {
+//    FROutput += -yawPIDOutput;
+//    FLOutput += yawPIDOutput;
+//    BLOutput += -yawPIDOutput;
+//    BROutput += yawPIDOutput;
+//  }
+//  else {
+//    FROutput += yawPIDOutput;
+//    FLOutput += -yawPIDOutput;
+//    BLOutput += yawPIDOutput;
+//    BROutput += -yawPIDOutput;
+//  }
+
   if(!flipPitch) {
     FROutput += -pitchPIDOutput;
     FLOutput += -pitchPIDOutput;
@@ -420,18 +386,6 @@ void drive() {
     FLOutput += pitchPIDOutput;
     BLOutput += -pitchPIDOutput;
     BROutput += -pitchPIDOutput;
-  }
-  if(flipRoll) {
-    FROutput += -rollPIDOutput;
-    FLOutput += rollPIDOutput;
-    BLOutput += rollPIDOutput;
-    BROutput += -rollPIDOutput;
-  }
-  else {
-    FROutput += rollPIDOutput;
-    FLOutput += -rollPIDOutput;
-    BLOutput += -rollPIDOutput;
-    BROutput += rollPIDOutput;
   }
   setSpeedFR(FROutput);
   setSpeedFL(FLOutput);

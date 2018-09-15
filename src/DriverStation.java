@@ -46,6 +46,8 @@ public class DriverStation
     private double RYAxisVal = 0;
     private double POVXVal = 0;
     private double POVYVal = 0;
+    private double POVXValLast = 0;
+    private double POVYValLast = 0;
     private JTextPane Console;
     private JComboBox ControllerCombo;
     private JPanel BtnStatus0; //Off = 4B4B4B
@@ -113,7 +115,7 @@ public class DriverStation
     boolean continueClock = false;
     long startElapsedTime = 0;
     double yawkp, yawki, yawkd;
-    double pitchkp, pitchki, pitchkd;
+    double kp, ki, kd;
     double rollkp, rollki, rollkd;
     int baudRate = 115200;
     int selectedControllerPort = 0;
@@ -160,9 +162,9 @@ public class DriverStation
                 if (yp.length() > 0) yawkp = Double.parseDouble(yp);
                 if (yi.length() > 0) yawki = Double.parseDouble(yi);
                 if (yd.length() > 0) yawkd = Double.parseDouble(yd);
-                if (pp.length() > 0) pitchkp = Double.parseDouble(pp);
-                if (pi.length() > 0) pitchki = Double.parseDouble(pi);
-                if (pd.length() > 0) pitchkd = Double.parseDouble(pd);
+                if (pp.length() > 0) kp = Double.parseDouble(pp);
+                if (pi.length() > 0) ki = Double.parseDouble(pi);
+                if (pd.length() > 0) kd = Double.parseDouble(pd);
                 if (rp.length() > 0) rollkp = Double.parseDouble(rp);
                 if (ri.length() > 0) rollki = Double.parseDouble(ri);
                 if (rd.length() > 0) rollkd = Double.parseDouble(rd);
@@ -181,9 +183,9 @@ public class DriverStation
                 CurrentYawP.setText(yawkp + "");
                 CurrentYawI.setText(yawki + "");
                 CurrentYawD.setText(yawkd + "");
-                CurrentPitchP.setText(pitchkp + "");
-                CurrentPitchI.setText(pitchki + "");
-                CurrentPitchD.setText(pitchkd + "");
+                CurrentPitchP.setText(kp + "");
+                CurrentPitchI.setText(ki + "");
+                CurrentPitchD.setText(kd + "");
                 CurrentRollP.setText(rollkp + "");
                 CurrentRollI.setText(rollki + "");
                 CurrentRollD.setText(rollkd + "");
@@ -206,18 +208,18 @@ public class DriverStation
             yawkp = Double.parseDouble(st.nextToken());
             yawki = Double.parseDouble(st.nextToken());
             yawkd = Double.parseDouble(st.nextToken());
-            pitchkp = Double.parseDouble(st.nextToken());
-            pitchki = Double.parseDouble(st.nextToken());
-            pitchkd = Double.parseDouble(st.nextToken());
-            rollkp = pitchkp;
-            rollki = pitchki;
-            rollkd = pitchkp;
+            kp = Double.parseDouble(st.nextToken());
+            ki = Double.parseDouble(st.nextToken());
+            kd = Double.parseDouble(st.nextToken());
+            rollkp = kp;
+            rollki = ki;
+            rollkd = kp;
             CurrentYawP.setText(yawkp + "");
             CurrentYawI.setText(yawki + "");
             CurrentYawD.setText(yawkd + "");
-            CurrentPitchP.setText(pitchkp + "");
-            CurrentPitchI.setText(pitchki + "");
-            CurrentPitchD.setText(pitchkd + "");
+            CurrentPitchP.setText(kp + "");
+            CurrentPitchI.setText(ki + "");
+            CurrentPitchD.setText(kd + "");
             CurrentRollP.setText(rollkp + "");
             CurrentRollI.setText(rollki + "");
             CurrentRollD.setText(rollkd + "");
@@ -479,7 +481,7 @@ public class DriverStation
                     while (true)
                     {
                         receive();
-                        Thread.sleep(1);
+                        Thread.sleep(50);
                     }
                 } catch (Exception e)
                 {
@@ -534,7 +536,8 @@ public class DriverStation
 
     private void drive()
     {
-        send(new byte[]{0x2, (byte) Math.round(YAxisVal), (byte) Math.round(RYAxisVal), (byte) Math.round(RXAxisVal), Btn6 ? (byte) 1 : (byte) 0, Btn7 ? (byte) 1 : (byte) 0});
+        send(new byte[]{0x2, (byte) Math.round(YAxisVal), (byte) Math.round(RYAxisVal),
+                (byte) Math.round(RXAxisVal), Btn6 ? (byte) 1 : (byte) 0, Btn7 ? (byte) 1 : (byte) 0});
     }
 
     int errorReportLoops = 5;
@@ -698,11 +701,25 @@ public class DriverStation
             controllerWarningPanel.setBackground(new Color(0xff0007));
         else
             controllerWarningPanel.setBackground(new Color(0x3C3F41));
-        if (controller.getButtonCount() == 13) updateControllerButtons(controller);
+        System.out.println(controller.getButtonCount());
+        if (controller.getButtonCount() > 10)
+            updateControllerButtons(controller);
         POVXAxis.setValue((int) (controller.getPovX()));
         POVXVal = controller.getPovX();
         POVYAxis.setValue((int) (controller.getPovY() * -1));
         POVYVal = controller.getPovY() * -1;
+
+        //Send trim controls
+        if(POVXVal == 1 && POVXValLast == 0 && POVYValLast == 0)
+            send(new byte[]{5,0});
+        else if (POVYVal == 1 && POVXValLast == 0 && POVYValLast == 0)
+            send(new byte[]{5, 1});
+        else if (POVXVal == -1 && POVXValLast == 0 && POVYValLast == 0)
+            send(new byte[]{5, 2});
+        else if (POVYVal == -1 && POVXValLast == 0 && POVYValLast == 0)
+            send(new byte[]{5, 3});
+        POVXValLast = POVXVal;
+        POVYValLast = POVYVal;
 
         //Update Elapsed Time if enabled
         if (continueClock)
@@ -722,8 +739,7 @@ public class DriverStation
         }
 
         if (droneEnabled) drive();
-            //set motor values for disabled testing
-        else
+        else //set motor values for disabled testing
         {
             byte[] toSend = new byte[]{3, (byte) MotorController0.getValue(), (byte) MotorController1.getValue(),
                     (byte) MotorController2.getValue(), (byte) MotorController3.getValue()};
@@ -743,6 +759,7 @@ public class DriverStation
     {
         if (controller.isButtonPressed(0))
         {
+            System.out.println("asdf");
             Btn0 = true;
             BtnStatus0.setBackground(new Color(0x64ff00));
         } else
@@ -862,23 +879,16 @@ public class DriverStation
 
     private String updatePID()
     {
-        String text = yawkp + " " + yawki + " " + yawkd + " " + pitchkp + " " + pitchki + " " + pitchkd;
+        String text = yawkp + " " + yawki + " " + yawkd + " " + kp + " " + ki + " " + kd;
         printToConsole("Set PID to: " + text);
         byte[] toSend = new byte[]{4,
-                (byte) (yawkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkp) * 100000) >> 24), (byte) ((int) (Math.abs(yawkp) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(yawkp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkp) * 100000) % (0x100)),
-                (byte) (yawki < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawki) * 100000) >> 24), (byte) ((int) (Math.abs(yawki) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(yawki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawki) * 100000) % (0x100)),
-                (byte) (yawkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkd) * 100000) >> 24), (byte) ((int) (Math.abs(yawkd) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(yawkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkd) * 100000) % (0x100)),
-                (byte) (pitchkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchkp) * 100000) >> 24), (byte) ((int) (Math.abs(pitchkp) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(pitchkp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(pitchkp) * 100000) % (0x100)),
-                (byte) (pitchki < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchki) * 100000) >> 24), (byte) ((int) (Math.abs(pitchki) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(pitchki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(pitchki) * 100000) % (0x100)),
-                (byte) (pitchkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(pitchkd) * 100000) >> 24), (byte) ((int) (Math.abs(pitchkd) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(pitchkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(pitchkd) * 100000) % (0x100))
+                (byte) (kp < 0 ? 1 : 0), (byte) ((int) (Math.abs(kp) * 100000) >> 24), (byte) ((int) (Math.abs(kp) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(kp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kp) * 100000) % (0x100)),
+                (byte) (ki < 0 ? 1 : 0), (byte) ((int) (Math.abs(ki) * 100000) >> 24), (byte) ((int) (Math.abs(ki) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(ki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(ki) * 100000) % (0x100)),
+                (byte) (kd < 0 ? 1 : 0), (byte) ((int) (Math.abs(kd) * 100000) >> 24), (byte) ((int) (Math.abs(kd) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(kd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kd) * 100000) % (0x100))
         };
-        System.out.println(toSend[2]);
         send(toSend);
         return text;
     }
@@ -932,30 +942,6 @@ public class DriverStation
         Console.setText(ConsoleHistory);
         JScrollBar vertical = ConsoleScrollPane.getVerticalScrollBar();
         vertical.setValue(vertical.getMaximum());
-    }
-
-    /**
-     * @noinspection ALL
-     */
-    private Font $$$getFont$$$(String fontName, int style, int size, Font currentFont)
-    {
-        if (currentFont == null) return null;
-        String resultName;
-        if (fontName == null)
-        {
-            resultName = currentFont.getName();
-        } else
-        {
-            Font testFont = new Font(fontName, Font.PLAIN, 10);
-            if (testFont.canDisplay('a') && testFont.canDisplay('1'))
-            {
-                resultName = fontName;
-            } else
-            {
-                resultName = currentFont.getName();
-            }
-        }
-        return new Font(resultName, style >= 0 ? style : currentFont.getStyle(), size >= 0 ? size : currentFont.getSize());
     }
 
     /**
@@ -1460,6 +1446,30 @@ public class DriverStation
         if (mpuZeroButtonFont != null) mpuZeroButton.setFont(mpuZeroButtonFont);
         mpuZeroButton.setText("Calibrate Gyroscope and Accelerometer");
         DriverPanel.add(mpuZeroButton, new com.intellij.uiDesigner.core.GridConstraints(7, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    }
+
+    /**
+     * @noinspection ALL
+     */
+    private Font $$$getFont$$$(String fontName, int style, int size, Font currentFont)
+    {
+        if (currentFont == null) return null;
+        String resultName;
+        if (fontName == null)
+        {
+            resultName = currentFont.getName();
+        } else
+        {
+            Font testFont = new Font(fontName, Font.PLAIN, 10);
+            if (testFont.canDisplay('a') && testFont.canDisplay('1'))
+            {
+                resultName = fontName;
+            } else
+            {
+                resultName = currentFont.getName();
+            }
+        }
+        return new Font(resultName, style >= 0 ? style : currentFont.getStyle(), size >= 0 ? size : currentFont.getSize());
     }
 
     /**
