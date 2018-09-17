@@ -41,9 +41,9 @@ Servo ESCFR, ESCFL, ESCBL, ESCBR;
 float yawkp = 0;
 float yawki = 0;
 float yawkd = 0;
-float kp = 0.07;
-float ki = 0.00000001;
-float kd = 90.0;
+float kp = 178.0;
+float ki = 480.0;
+float kd = 69.0;
 long lastTime = 0;
 double IntegralYaw = 0;
 double IntegralPitch = 0;
@@ -72,31 +72,33 @@ boolean LTrig = false;
 int POVXAxis = 0;
 int POVYAxis = 0;
 long lastCommandTime = 0;
-double maxPitchPID = 25;
+double maxPID = 25;
 double currentMotor0 = 0;
 double currentMotor1 = 0;
 double currentMotor2 = 0;
 double currentMotor3 = 0;
 
+long sendPeriod = 200;
+long lastSend = 0;
 long lastSentTime = 0;
 long timeout = 200;
 long updateFrequency = 100;
-int sampleTime = 10;
+long sampleTime = 5;
 
 boolean enabled = false;
 
 void setup() {
 
   delay(1000);
-  Serial.begin(115200);
+  Serial.begin(57600);
   Serial.setTimeout(0);
   sendConsole("Started");
   pinMode(7, OUTPUT); //CMD
   digitalWrite(7, HIGH); //CMD
   
-  ESCBL.attach(6); //Change to PWM pins //FR
+//  ESCBL.attach(6); //Change to PWM pins //FR
   ESCFL.attach(5);						//FL
-  ESCFR.attach(4);						//BL
+//  ESCFR.attach(4);						//BL
   ESCBR.attach(3);						//BR
   setSpeedFR(0);
   setSpeedFL(0);
@@ -105,14 +107,19 @@ void setup() {
   delay(1000);
   lastCommandTime = millis();
   lastSentTime = millis();
+  sendConsole("Starting MPU Setup");
   mpuSetup();
+  sendConsole("MPU Setup Successful");
   delay(3);
 }
 
 void loop() {
   mpuLoop();
   receiveCommands();
-  sendUpdates();
+  if(millis() - lastSend > sendPeriod) {
+    sendUpdates();
+    lastSend = millis(); 
+  }
   if(millis() - lastCommandTime > timeout) disable();
   if(enabled) {
     if(millis() - lastTime >= sampleTime) {
@@ -120,7 +127,6 @@ void loop() {
       lastTime = millis();
     }
   }
-  delay(.5);
 }
 
 void send(byte toSend[], int length) {
@@ -197,9 +203,9 @@ void receiveCommands() {
   else if(command == 0x1) //zero gyro
   {
     byte holder[2];
-    Serial.readBytes(holder, 2);
+    readSerial(holder, 2);
 	  byte checksum[1];
-	  Serial.readBytes(checksum, 1);
+	  readSerial(checksum, 1);
 	  byte calculatedChecksum = calculateChecksum(holder, 2) + command;
 	  if (calculatedChecksum != checksum[0])
 	  {
@@ -213,9 +219,9 @@ void receiveCommands() {
   else if(command == 0x2) //set joystick values
   {
     byte holder[5];
-    Serial.readBytes(holder, 5);
+    readSerial(holder, 5);
 	  byte checksum[1];
-	  Serial.readBytes(checksum, 1);
+	  readSerial(checksum, 1);
 	  byte calculatedChecksum = calculateChecksum(holder, 5) + command;
 	  if (calculatedChecksum != checksum[0])
 	  {
@@ -232,9 +238,9 @@ void receiveCommands() {
   else if(command == 0x3) //set motor testing
   {
     byte holder[4];
-	  Serial.readBytes(holder, 4);
+	  readSerial(holder, 4);
 	  byte checksum[1];
-	  Serial.readBytes(checksum, 1);
+	  readSerial(checksum, 1);
 	  byte calculatedChecksum = calculateChecksum(holder, 4) + command;
   	if (calculatedChecksum != checksum[0])
   	{
@@ -258,11 +264,11 @@ void receiveCommands() {
     setSpeedBR(speedBR);
    }
   else if(command == 0x4) //set PID constants
-  {
+  {   
     byte holder[15];
-    Serial.readBytes(holder, 15);
+    readSerial(holder, 15);
 	  byte checksum[1];
-	  Serial.readBytes(checksum, 1);
+	  readSerial(checksum, 1);
 	  byte calculatedChecksum = calculateChecksum(holder, 15) + command;
 	  if (calculatedChecksum != checksum[0])
 	  {
@@ -293,20 +299,33 @@ void receiveCommands() {
   if(command == 0x5) //set trim
   {
     byte holder[1];
-    Serial.readBytes(holder, 1);
+    readSerial(holder, 1);
     byte checksum[1];
-    Serial.readBytes(checksum, 1);
+    readSerial(checksum, 1);
     byte calculatedChecksum = calculateChecksum(holder, 1) + command;
     if (calculatedChecksum != checksum[0]) {
       Serial.flush();
       return;
     }
-    if(holder[0] == 0) pitchOffset -= .2;
+    sendConsole(String(currentPitch));
+    if(holder[0] == 0) pitchOffset += .2;
     else if(holder[0] == 1) rollOffset -= .2;
     else if(holder[0] == 2) pitchOffset += .2;
-    else if(holder[0] == 3) rollOffset += .2;
-    sendConsole(String(holder[0]));
+    else if(holder[0] == 3) rollOffset -= .2;
   }
+}
+
+void readSerial(byte arr[], int numToRead) {
+  byte temp[1];  
+  for(int i = 0; i < numToRead; i++) {
+    if(Serial.available() > 0) Serial.readBytes(temp, 1);
+    else {
+      i--;
+      continue;
+    }
+    arr[i] = temp[0];
+  }
+  Serial.flush();
 }
 /*********************************************************************************************************/
 
@@ -347,30 +366,27 @@ int printLoop = 0;
 void drive() {
   if(RYAxis > 100) RYAxis = map(RYAxis, 156, 250, -100, 0);
   if(RXAxis > 100) RXAxis = map(RXAxis, 156, 250, -100, 0);
-  expectedPitch = map(RYAxis, -100, 100, 5, -5);
-  expectedRoll = map(RXAxis, -100, 100, -5, 5);
+  expectedPitch = map(RYAxis, -100, 100, -5, 5);
+  expectedRoll = map(RXAxis, -100, 100, 5, -5);
 //  expectedPitch = 0;
 //  expectedRoll = 0;
   double changeInTime = millis() - lastTime;
-  double errorYaw = currentYaw - expectedYaw;
   double errorPitch = currentPitch - expectedPitch;
   double errorRoll = currentRoll - expectedRoll;
-  boolean flipYaw = errorYaw < 0;
   boolean flipPitch = errorPitch < 0;
   boolean flipRoll = errorRoll < 0;
-  errorYaw = abs(errorYaw);
   errorPitch = abs(errorPitch);
   errorRoll = abs(errorRoll);
-  double changeErrorYaw = errorYaw - lastErrorYaw;
   double changeErrorPitch = errorPitch - lastErrorPitch;
   double changeErrorRoll = errorRoll - lastErrorRoll;
-  double changeYaw = currentYaw - lastYaw;
   double changePitch = currentPitch - lastPitch;
   double changeRoll = currentRoll - lastRoll;
   changeErrorPitch = -changeErrorPitch;
   changeErrorRoll = -changeErrorRoll;
   changePitch = -changePitch;
   changeRoll = -changeRoll;
+  IntegralPitch += ki * errorPitch;
+  IntegralRoll += kd * errorRoll;
   
 //  double errorYaw = currentYaw - expectedYaw;
 //  boolean flipYaw = errorYaw < 0;
@@ -384,28 +400,22 @@ void drive() {
 //  lastYaw = currentYaw;
 //  IntegralYaw += errorYaw;
 
-  if(errorYaw < .3) IntegralYaw = 0;
-  if(YAxis == 0 || errorPitch < .3) IntegralPitch = 0;
-  if(YAxis == 0 || errorRoll < .3) IntegralRoll = 0;
+  if(YAxis == 0) IntegralPitch = 0;
+  if(YAxis == 0) IntegralRoll = 0;
   
-  double pitchPIDOutput = kp * errorPitch + ki * IntegralPitch - kd * changeErrorPitch / changeInTime;
-  double rollPIDOutput = kp * errorRoll + ki * IntegralRoll - kd * changeErrorRoll / changeInTime;
+  double pitchPIDOutput = kp * errorPitch/1000. + IntegralPitch/1000000000. - kd * changeErrorPitch / changeInTime;
+  double rollPIDOutput = kp * errorRoll/1000. + IntegralRoll/1000000000. - kd * changeErrorRoll / changeInTime;
  
-  if(pitchPIDOutput > maxPitchPID) pitchPIDOutput = maxPitchPID;
-  if(rollPIDOutput > maxPitchPID) rollPIDOutput = maxPitchPID;
-  if(pitchPIDOutput < -maxPitchPID) pitchPIDOutput = -maxPitchPID;
-  if(rollPIDOutput < -maxPitchPID) rollPIDOutput = -maxPitchPID;
+  if(pitchPIDOutput > maxPID) pitchPIDOutput = maxPID;
+  if(rollPIDOutput > maxPID) rollPIDOutput = maxPID;
+  if(pitchPIDOutput < -maxPID) pitchPIDOutput = -maxPID;
+  if(rollPIDOutput < -maxPID) rollPIDOutput = -maxPID;
   
   lastTime = millis();
-  lastErrorYaw = errorYaw;
   lastErrorPitch = errorPitch;
   lastErrorRoll = errorRoll;
-  lastYaw = currentYaw;
   lastPitch = currentPitch;
   lastRoll = currentRoll;
-  IntegralYaw += errorYaw;
-  IntegralPitch += errorPitch;
-  IntegralRoll += errorRoll;
 
   double FROutput = YAxis;
   double FLOutput = YAxis;
@@ -426,7 +436,7 @@ void drive() {
     BROutput += -yawPIDOutput;
   }
 */
-  if(!flipPitch) {
+  if(flipPitch) {
     FROutput += -pitchPIDOutput;
     FLOutput += -pitchPIDOutput;
     BLOutput += pitchPIDOutput;
@@ -438,26 +448,22 @@ void drive() {
     BLOutput += -pitchPIDOutput;
     BROutput += -pitchPIDOutput;
   }
-//  if(flipRoll) {
-//    FROutput += -rollPIDOutput;
-//    FLOutput += rollPIDOutput;
-//    BLOutput += rollPIDOutput;
-//    BROutput += -rollPIDOutput;
-//  }
-//  else {
-//    FROutput += rollPIDOutput;
-//    FLOutput += -rollPIDOutput;
-//    BLOutput += -rollPIDOutput;
-//    BROutput += rollPIDOutput;
-//  }
+  if(!flipRoll) {
+    FROutput += -rollPIDOutput;
+    FLOutput += rollPIDOutput;
+    BLOutput += rollPIDOutput;
+    BROutput += -rollPIDOutput;
+  }
+  else {
+    FROutput += rollPIDOutput;
+    FLOutput += -rollPIDOutput;
+    BLOutput += -rollPIDOutput;
+    BROutput += rollPIDOutput;
+  }
   setSpeedFR(FROutput);
   setSpeedFL(FLOutput);
   setSpeedBL(BLOutput);
   setSpeedBR(BROutput);
-  if(printLoop++ == 300) {
-    sendConsole(String(FROutput));
-    printLoop = 0;
-  }
 }
 
 void calibrateMPU()
@@ -488,7 +494,6 @@ void setSpeedFR(double speed) {
 }
 
 void setSpeedFL(double speed) {
-	speed++;
   if(speed < 0) speed = 0;
   if(speed > 100) speed = 100;
   int toWrite = map(speed, 0, 100, 1000, 1832);

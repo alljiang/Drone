@@ -9,6 +9,7 @@ import org.lwjgl.input.Controller;
 import org.lwjgl.input.Controllers;
 
 import javax.swing.*;
+import javax.swing.text.DefaultCaret;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
@@ -117,7 +118,7 @@ public class DriverStation
     double yawkp, yawki, yawkd;
     double kp, ki, kd;
     double rollkp, rollki, rollkd;
-    int baudRate = 115200;
+    int baudRate = 57600;
     int selectedControllerPort = 0;
     ArrayDeque<Double> rollStorage = new ArrayDeque<>();
     ArrayDeque<Double> pitchStorage = new ArrayDeque<>();
@@ -205,15 +206,12 @@ public class DriverStation
         {
             BufferedReader br = new BufferedReader(new FileReader("PIDStorage.dat"));
             StringTokenizer st = new StringTokenizer(br.readLine());
-            yawkp = Double.parseDouble(st.nextToken());
-            yawki = Double.parseDouble(st.nextToken());
-            yawkd = Double.parseDouble(st.nextToken());
             kp = Double.parseDouble(st.nextToken());
             ki = Double.parseDouble(st.nextToken());
             kd = Double.parseDouble(st.nextToken());
             rollkp = kp;
             rollki = ki;
-            rollkd = kp;
+            rollkd = kd;
             CurrentYawP.setText(yawkp + "");
             CurrentYawI.setText(yawki + "");
             CurrentYawD.setText(yawkd + "");
@@ -296,6 +294,8 @@ public class DriverStation
         mpuZeroButton.getActionMap().put("disable", disable);
 
         Console.setFocusable(false);
+        DefaultCaret caret = (DefaultCaret) Console.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
         YPR_Picture.addMouseListener(new MouseAdapter()
         {
             @Override
@@ -464,7 +464,7 @@ public class DriverStation
                     while (true)
                     {
                         update();
-                        Thread.sleep(50);
+                        Thread.sleep(100);
                     }
                 } catch (Exception e)
                 {
@@ -545,7 +545,7 @@ public class DriverStation
     private void drive()
     {
         long timeLength = System.currentTimeMillis() - lastUpdateTime;
-        double toChange = timeLength * YAxisVal / 180000.;
+        double toChange = timeLength * YAxisVal / ((YAxisVal > 0) ? 300000. : 250000.);
         currentThrottle += toChange;
         currentThrottle = Math.min(100, Math.max(0, currentThrottle));
         System.out.println(currentThrottle);
@@ -639,11 +639,6 @@ public class DriverStation
                 }
                 String s = "";
                 for (byte b : strArr) s += (char) unsign(b);
-                if (s.equals("PID"))
-                {
-//                    updatePID();
-                    return;
-                }
                 printToConsole(s);
             }
         } catch (Exception e)
@@ -725,13 +720,13 @@ public class DriverStation
         POVYVal = controller.getPovY() * -1;
 
         //Send trim controls
-        if(POVXVal == 1 && POVXValLast == 0 && POVYValLast == 0)
-            send(new byte[]{5,0});
-        else if (POVYVal == 1 && POVXValLast == 0 && POVYValLast == 0)
+        if (POVYVal == 1 && POVXValLast == 0 && POVYValLast == 0)
+            send(new byte[]{5, 0});
+        else if (POVXVal == 1 && POVXValLast == 0 && POVYValLast == 0)
             send(new byte[]{5, 1});
-        else if (POVXVal == -1 && POVXValLast == 0 && POVYValLast == 0)
-            send(new byte[]{5, 2});
         else if (POVYVal == -1 && POVXValLast == 0 && POVYValLast == 0)
+            send(new byte[]{5, 2});
+        else if (POVXVal == -1 && POVXValLast == 0 && POVYValLast == 0)
             send(new byte[]{5, 3});
         POVXValLast = POVXVal;
         POVYValLast = POVYVal;
@@ -760,7 +755,6 @@ public class DriverStation
             byte[] toSend = new byte[]{0x3, (byte) MotorController0.getValue(), (byte) MotorController1.getValue(),
                     (byte) MotorController2.getValue(), (byte) MotorController3.getValue()};
             send(toSend);
-            System.out.println("motor testing");
         }
 
         if (Btn12) disable();
@@ -895,7 +889,7 @@ public class DriverStation
 
     private String updatePID()
     {
-        String text = yawkp + " " + yawki + " " + yawkd + " " + kp + " " + ki + " " + kd;
+        String text = kp + " " + ki + " " + kd;
         printToConsole("Set PID to: " + text);
         byte[] toSend = new byte[]{4,
                 (byte) (kp < 0 ? 1 : 0), (byte) ((int) (Math.abs(kp) * 100000) >> 24), (byte) ((int) (Math.abs(kp) * 100000) >> 16 % (0x1000000)),
@@ -905,7 +899,6 @@ public class DriverStation
                 (byte) (kd < 0 ? 1 : 0), (byte) ((int) (Math.abs(kd) * 100000) >> 24), (byte) ((int) (Math.abs(kd) * 100000) >> 16 % (0x1000000)),
                 (byte) ((int) (Math.abs(kd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kd) * 100000) % (0x100))
         };
-//        System.out.println(toSend[2]);
         send(toSend);
         return text;
     }
@@ -1274,40 +1267,40 @@ public class DriverStation
         PIDPanel.add(M3, new com.intellij.uiDesigner.core.GridConstraints(40, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         Font CurrentYawDFont = this.$$$getFont$$$(null, -1, 26, CurrentYawD.getFont());
         if (CurrentYawDFont != null) CurrentYawD.setFont(CurrentYawDFont);
-        CurrentYawD.setText("0.00");
+        CurrentYawD.setText("0.0");
         PIDPanel.add(CurrentYawD, new com.intellij.uiDesigner.core.GridConstraints(2, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         CurrentYawI = new JLabel();
         Font CurrentYawIFont = this.$$$getFont$$$(null, -1, 26, CurrentYawI.getFont());
         if (CurrentYawIFont != null) CurrentYawI.setFont(CurrentYawIFont);
-        CurrentYawI.setText("0.00");
+        CurrentYawI.setText("0.0");
         PIDPanel.add(CurrentYawI, new com.intellij.uiDesigner.core.GridConstraints(2, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         Font CurrentPitchPFont = this.$$$getFont$$$(null, -1, 26, CurrentPitchP.getFont());
         if (CurrentPitchPFont != null) CurrentPitchP.setFont(CurrentPitchPFont);
-        CurrentPitchP.setText("0.00");
+        CurrentPitchP.setText("0.0");
         PIDPanel.add(CurrentPitchP, new com.intellij.uiDesigner.core.GridConstraints(21, 2, 7, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         Font CurrentPitchIFont = this.$$$getFont$$$(null, -1, 26, CurrentPitchI.getFont());
         if (CurrentPitchIFont != null) CurrentPitchI.setFont(CurrentPitchIFont);
-        CurrentPitchI.setText("0.00");
+        CurrentPitchI.setText("0.0");
         PIDPanel.add(CurrentPitchI, new com.intellij.uiDesigner.core.GridConstraints(24, 4, 3, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         Font CurrentPitchDFont = this.$$$getFont$$$(null, -1, 26, CurrentPitchD.getFont());
         if (CurrentPitchDFont != null) CurrentPitchD.setFont(CurrentPitchDFont);
-        CurrentPitchD.setText("0.00");
+        CurrentPitchD.setText("0.0");
         PIDPanel.add(CurrentPitchD, new com.intellij.uiDesigner.core.GridConstraints(25, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         Font CurrentRollPFont = this.$$$getFont$$$(null, -1, 26, CurrentRollP.getFont());
         if (CurrentRollPFont != null) CurrentRollP.setFont(CurrentRollPFont);
-        CurrentRollP.setText("0.00");
+        CurrentRollP.setText("0.0");
         PIDPanel.add(CurrentRollP, new com.intellij.uiDesigner.core.GridConstraints(31, 2, 7, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         Font CurrentRollDFont = this.$$$getFont$$$(null, -1, 26, CurrentRollD.getFont());
         if (CurrentRollDFont != null) CurrentRollD.setFont(CurrentRollDFont);
-        CurrentRollD.setText("0.00");
+        CurrentRollD.setText("0.0");
         PIDPanel.add(CurrentRollD, new com.intellij.uiDesigner.core.GridConstraints(34, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         Font CurrentRollIFont = this.$$$getFont$$$(null, -1, 26, CurrentRollI.getFont());
         if (CurrentRollIFont != null) CurrentRollI.setFont(CurrentRollIFont);
-        CurrentRollI.setText("0.00");
+        CurrentRollI.setText("0.0");
         PIDPanel.add(CurrentRollI, new com.intellij.uiDesigner.core.GridConstraints(34, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         Font CurrentYawPFont = this.$$$getFont$$$(null, -1, 26, CurrentYawP.getFont());
         if (CurrentYawPFont != null) CurrentYawP.setFont(CurrentYawPFont);
-        CurrentYawP.setText("0.00");
+        CurrentYawP.setText("0.0");
         PIDPanel.add(CurrentYawP, new com.intellij.uiDesigner.core.GridConstraints(2, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         currentYaw = new JLabel();
         Font currentYawFont = this.$$$getFont$$$(null, -1, 24, currentYaw.getFont());
