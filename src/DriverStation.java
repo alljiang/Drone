@@ -417,7 +417,7 @@ public class DriverStation
                 ds, PlotOrientation.VERTICAL, true, true, false);
         ChartPanel cp = new ChartPanel(chart);
         graphFrame.setContentPane(cp);
-        graphFrame.setVisible(true);
+        graphFrame.setVisible(false);
         graphFrame.pack();
 
         //COM Port Selection

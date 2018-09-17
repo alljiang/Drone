@@ -41,9 +41,9 @@ Servo ESCFR, ESCFL, ESCBL, ESCBR;
 float yawkp = 0;
 float yawki = 0;
 float yawkd = 0;
-float kp = 178.0;
+float kp = 178.0; //250
 float ki = 480.0;
-float kd = 69.0;
+float kd = 69.0; //75
 long lastTime = 0;
 double IntegralYaw = 0;
 double IntegralPitch = 0;
@@ -72,7 +72,8 @@ boolean LTrig = false;
 int POVXAxis = 0;
 int POVYAxis = 0;
 long lastCommandTime = 0;
-double maxPID = 25;
+double maxPID = 30;
+double maxIntegral = 10;
 double currentMotor0 = 0;
 double currentMotor1 = 0;
 double currentMotor2 = 0;
@@ -83,7 +84,7 @@ long lastSend = 0;
 long lastSentTime = 0;
 long timeout = 200;
 long updateFrequency = 100;
-long sampleTime = 5;
+long sampleTime = 8;
 
 boolean enabled = false;
 
@@ -368,43 +369,21 @@ void drive() {
   if(RXAxis > 100) RXAxis = map(RXAxis, 156, 250, -100, 0);
   expectedPitch = map(RYAxis, -100, 100, -5, 5);
   expectedRoll = map(RXAxis, -100, 100, 5, -5);
-//  expectedPitch = 0;
-//  expectedRoll = 0;
   double changeInTime = millis() - lastTime;
   double errorPitch = currentPitch - expectedPitch;
   double errorRoll = currentRoll - expectedRoll;
-  boolean flipPitch = errorPitch < 0;
-  boolean flipRoll = errorRoll < 0;
-  errorPitch = abs(errorPitch);
-  errorRoll = abs(errorRoll);
-  double changeErrorPitch = errorPitch - lastErrorPitch;
-  double changeErrorRoll = errorRoll - lastErrorRoll;
+  IntegralPitch += ki * errorPitch / 100000.;
+  IntegralRoll += ki * errorRoll / 100000.;
   double changePitch = currentPitch - lastPitch;
   double changeRoll = currentRoll - lastRoll;
-  changeErrorPitch = -changeErrorPitch;
-  changeErrorRoll = -changeErrorRoll;
-  changePitch = -changePitch;
-  changeRoll = -changeRoll;
-  IntegralPitch += ki * errorPitch;
-  IntegralRoll += kd * errorRoll;
   
-//  double errorYaw = currentYaw - expectedYaw;
-//  boolean flipYaw = errorYaw < 0;
-//  errorYaw = abs(errorYaw);
-//  double changeErrorYaw = errorYaw - lastErrorYaw;
-//  double changeYaw = currentYaw - lastYaw;
-//  if(errorYaw < .3) IntegralYaw = 0;
-//  if(YAxis == 0 || errorPitch < .3) IntegralPitch = 0;
-//  double yawPIDOutput = yawkp * errorYaw / 100. + yawki * IntegralYaw  / 1000.- yawkd * changeYaw / changeInTime;
-//  lastErrorYaw = errorYaw;
-//  lastYaw = currentYaw;
-//  IntegralYaw += errorYaw;
+  if(IntegralPitch > maxIntegral) IntegralPitch = maxIntegral;
+  if(IntegralPitch < -maxIntegral) IntegralPitch = -maxIntegral;
+  if(IntegralRoll > maxIntegral) IntegralRoll = maxIntegral;
+  if(IntegralRoll < -maxIntegral) IntegralRoll = -maxIntegral;
 
-  if(YAxis == 0) IntegralPitch = 0;
-  if(YAxis == 0) IntegralRoll = 0;
-  
-  double pitchPIDOutput = kp * errorPitch/1000. + IntegralPitch/1000000000. - kd * changeErrorPitch / changeInTime;
-  double rollPIDOutput = kp * errorRoll/1000. + IntegralRoll/1000000000. - kd * changeErrorRoll / changeInTime;
+  double pitchPIDOutput = kp * errorPitch/1000. + IntegralPitch + kd * changePitch / changeInTime;
+  double rollPIDOutput = kp * errorRoll/1000. + IntegralRoll + kd * changeRoll / changeInTime;
  
   if(pitchPIDOutput > maxPID) pitchPIDOutput = maxPID;
   if(rollPIDOutput > maxPID) rollPIDOutput = maxPID;
@@ -421,45 +400,17 @@ void drive() {
   double FLOutput = YAxis;
   double BLOutput = YAxis;
   double BROutput = YAxis;
-/*
-  //FLIP THESE VALUES IF YOU NEED TO BASED ON THE GYRO
-  if(flipYaw) {
-    FROutput += -yawPIDOutput;
-    FLOutput += yawPIDOutput;
-    BLOutput += -yawPIDOutput;
-    BROutput += yawPIDOutput;
-  }
-  else {
-    FROutput += yawPIDOutput;
-    FLOutput += -yawPIDOutput;
-    BLOutput += yawPIDOutput;
-    BROutput += -yawPIDOutput;
-  }
-*/
-  if(flipPitch) {
-    FROutput += -pitchPIDOutput;
-    FLOutput += -pitchPIDOutput;
-    BLOutput += pitchPIDOutput;
-    BROutput += pitchPIDOutput;
-  }
-  else {
-    FROutput += pitchPIDOutput;
-    FLOutput += pitchPIDOutput;
-    BLOutput += -pitchPIDOutput;
-    BROutput += -pitchPIDOutput;
-  }
-  if(!flipRoll) {
-    FROutput += -rollPIDOutput;
-    FLOutput += rollPIDOutput;
-    BLOutput += rollPIDOutput;
-    BROutput += -rollPIDOutput;
-  }
-  else {
-    FROutput += rollPIDOutput;
-    FLOutput += -rollPIDOutput;
-    BLOutput += -rollPIDOutput;
-    BROutput += rollPIDOutput;
-  }
+
+  FROutput += pitchPIDOutput;
+  FLOutput += pitchPIDOutput;
+  BLOutput += -pitchPIDOutput;
+  BROutput += -pitchPIDOutput;
+  
+  FROutput += -rollPIDOutput;
+  FLOutput += rollPIDOutput;
+  BLOutput += rollPIDOutput;
+  BROutput += -rollPIDOutput;
+    
   setSpeedFR(FROutput);
   setSpeedFL(FLOutput);
   setSpeedBL(BLOutput);
