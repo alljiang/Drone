@@ -41,9 +41,9 @@ Servo ESCFR, ESCFL, ESCBL, ESCBR;
 float yawkp = 0;
 float yawki = 0;
 float yawkd = 0;
-float kp = 178.0; //250
-float ki = 480.0;
-float kd = 69.0; //75
+float kp = 55.0;
+float ki = 17.0;
+float kd = 230.0;
 long lastTime = 0;
 double IntegralYaw = 0;
 double IntegralPitch = 0;
@@ -61,8 +61,6 @@ double lastErrorYaw = 0;
 double lastErrorPitch = 0;
 double lastErrorRoll = 0;
 double lastYaw = 0;
-double lastPitch = 0;
-double lastRoll = 0;
 double XAxis = 0;
 double YAxis = 0;
 double RXAxis = 0;
@@ -84,7 +82,7 @@ long lastSend = 0;
 long lastSentTime = 0;
 long timeout = 200;
 long updateFrequency = 100;
-long sampleTime = 8;
+long sampleTime = 7;
 
 boolean enabled = false;
 
@@ -106,12 +104,11 @@ void setup() {
   setSpeedBL(0);
   setSpeedBR(0);
   delay(1000);
-  lastCommandTime = millis();
-  lastSentTime = millis();
   sendConsole("Starting MPU Setup");
   mpuSetup();
   sendConsole("MPU Setup Successful");
-  delay(3);
+  lastCommandTime = millis();
+  lastSentTime = millis();
 }
 
 void loop() {
@@ -122,12 +119,12 @@ void loop() {
     lastSend = millis(); 
   }
   if(millis() - lastCommandTime > timeout) disable();
-  if(enabled) {
-    if(millis() - lastTime >= sampleTime) {
+//  if(enabled) {
+//    if(millis() - lastTime >= sampleTime) {
       drive();
-      lastTime = millis();
-    }
-  }
+//      lastTime = millis();
+//    }
+//  }
 }
 
 void send(byte toSend[], int length) {
@@ -338,8 +335,8 @@ void enable() {
   lastErrorPitch = currentPitch;
   lastErrorRoll = currentRoll;
   lastYaw = currentYaw;
-  lastPitch = currentPitch;
-  lastRoll = currentRoll;
+  lastErrorPitch = currentPitch;
+  lastErrorRoll = currentRoll;
   lastTime = millis();
   enabled = true;
   setSpeedFR(0);  
@@ -367,50 +364,45 @@ int printLoop = 0;
 void drive() {
   if(RYAxis > 100) RYAxis = map(RYAxis, 156, 250, -100, 0);
   if(RXAxis > 100) RXAxis = map(RXAxis, 156, 250, -100, 0);
-  expectedPitch = map(RYAxis, -100, 100, -5, 5);
-  expectedRoll = map(RXAxis, -100, 100, 5, -5);
-  double changeInTime = millis() - lastTime;
-  double errorPitch = currentPitch - expectedPitch;
-  double errorRoll = currentRoll - expectedRoll;
-  IntegralPitch += ki * errorPitch / 100000.;
-  IntegralRoll += ki * errorRoll / 100000.;
-  double changePitch = currentPitch - lastPitch;
-  double changeRoll = currentRoll - lastRoll;
-  
-  if(IntegralPitch > maxIntegral) IntegralPitch = maxIntegral;
-  if(IntegralPitch < -maxIntegral) IntegralPitch = -maxIntegral;
-  if(IntegralRoll > maxIntegral) IntegralRoll = maxIntegral;
-  if(IntegralRoll < -maxIntegral) IntegralRoll = -maxIntegral;
-
-  double pitchPIDOutput = kp * errorPitch/1000. + IntegralPitch + kd * changePitch / changeInTime;
-  double rollPIDOutput = kp * errorRoll/1000. + IntegralRoll + kd * changeRoll / changeInTime;
- 
-  if(pitchPIDOutput > maxPID) pitchPIDOutput = maxPID;
-  if(rollPIDOutput > maxPID) rollPIDOutput = maxPID;
-  if(pitchPIDOutput < -maxPID) pitchPIDOutput = -maxPID;
-  if(rollPIDOutput < -maxPID) rollPIDOutput = -maxPID;
-  
-  lastTime = millis();
-  lastErrorPitch = errorPitch;
-  lastErrorRoll = errorRoll;
-  lastPitch = currentPitch;
-  lastRoll = currentRoll;
-
   double FROutput = YAxis;
   double FLOutput = YAxis;
   double BLOutput = YAxis;
   double BROutput = YAxis;
 
+  //pitch calculations
+  expectedPitch = map(RYAxis, -100, 100, -5, 5);
+  double errorPitch = currentPitch - expectedPitch;
+  double changeErrorPitch = errorPitch - lastErrorPitch;
+  lastErrorPitch = errorPitch;
+  IntegralPitch += ki * errorPitch / 100000.
+  if(IntegralPitch > maxIntegral) IntegralPitch = maxIntegral;
+  if(IntegralPitch < -maxIntegral) IntegralPitch = -maxIntegral;
+  
+  double pitchPIDOutput = kp * errorPitch/1000. + IntegralPitch + kd * changeErrorPitch/100.;
+  if(pitchPIDOutput > maxPID) pitchPIDOutput = maxPID;
+  if(pitchPIDOutput < -maxPID) pitchPIDOutput = -maxPID;
   FROutput += pitchPIDOutput;
   FLOutput += pitchPIDOutput;
   BLOutput += -pitchPIDOutput;
   BROutput += -pitchPIDOutput;
-  
+
+  //roll calculations
+  expectedRoll = map(RXAxis, -100, 100, 5, -5);
+  double errorRoll = currentRoll - expectedRoll;
+  IntegralRoll += ki * errorRoll / 100000.;
+  double changeErrorRoll = errorRoll - lastErrorRoll;
+  lastErrorRoll = errorRoll;
+  if(IntegralRoll > maxIntegral) IntegralRoll = maxIntegral;
+  if(IntegralRoll < -maxIntegral) IntegralRoll = -maxIntegral;
+ 
+  double rollPIDOutput = kp * errorRoll/1000. + IntegralRoll + kd * changeErrorRoll/100.;
+  if(rollPIDOutput > maxPID) rollPIDOutput = maxPID;
+  if(rollPIDOutput < -maxPID) rollPIDOutput = -maxPID;
   FROutput += -rollPIDOutput;
   FLOutput += rollPIDOutput;
   BLOutput += rollPIDOutput;
   BROutput += -rollPIDOutput;
-    
+
   setSpeedFR(FROutput);
   setSpeedFL(FLOutput);
   setSpeedBL(BLOutput);
@@ -432,8 +424,6 @@ void calibrateMPU()
   lastErrorPitch = 0;
   lastErrorRoll = 0;
   lastYaw = 0;
-  lastPitch = 0;
-  lastRoll = 0;
 }
 
 void setSpeedFR(double speed) {

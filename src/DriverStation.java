@@ -545,7 +545,8 @@ public class DriverStation
     private void drive()
     {
         long timeLength = System.currentTimeMillis() - lastUpdateTime;
-        double toChange = timeLength * YAxisVal / ((YAxisVal > 0) ? 300000. : 250000.);
+        lastUpdateTime = System.currentTimeMillis();
+        double toChange = timeLength * YAxisVal / ((YAxisVal > 0) ? 3000. : 2500.);
         currentThrottle += toChange;
         currentThrottle = Math.min(100, Math.max(0, currentThrottle));
         System.out.println(currentThrottle);
