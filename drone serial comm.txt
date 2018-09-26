@@ -8,7 +8,8 @@
 [4]  set PID constants                  [sign 0/+ or 1/-][kP*100000>>24][kP*100000%(0x1000000)>>16][kP*100000%(0x10000)>>8][kP*100000%(0x100)] ALL OF THESE SHOULD BE READ UNSIGNED
                                         [sign 0/+ or 1/-][kI*100000>>24][kI*100000%(0x1000000)>>16][kI*100000%(0x10000)>>8][kI*100000%(0x100)]
                                         [sign 0/+ or 1/-][kD*100000>>24][kD*100000%(0x1000000)>>16][kD*100000%(0x10000)>>8][kD*100000%(0x100)]
-[5]  trim controls                      [0:Up/1:Right/2:Down/3:Left]
+[5]  translational trim                 [0:Up/1:Right/2:Down/3:Left]
+[6]  rotational trim                    [0:CCW/1:CW]
 
 -----To Command Station-------
 [command][information][checksum]

@@ -77,6 +77,8 @@ public class DriverStation
     private boolean Btn10; //LCLICK
     private boolean Btn11; //RCLICK
     private boolean Btn12; //HOMEBTN
+    private boolean Btn4Last = false;
+    private boolean Btn5Last = false;
     private JProgressBar POVXAxis;
     private JProgressBar POVYAxis;
     private JLabel CurrentYawI;
@@ -304,6 +306,11 @@ public class DriverStation
                 disable();
             }
         });
+
+        RollP.setVisible(false);
+        RollI.setVisible(false);
+        RollD.setVisible(false);
+
         COMCombo.addActionListener(new ActionListener()
         {
             @Override
@@ -562,7 +569,7 @@ public class DriverStation
         try
         {
             byte[] packet = concatenate(toSend, new byte[]{calculateChecksum(toSend)});
-            port.writeBytes(packet, packet.length);
+            if (port != null) port.writeBytes(packet, packet.length);
             System.out.println("Sent: " + Arrays.toString(toSend));
         } catch (Exception e)
         {
@@ -587,7 +594,7 @@ public class DriverStation
     {
         try
         {
-            if (port.bytesAvailable() == 0) return;
+            if (port == null || port.bytesAvailable() == 0) return;
             byte[] cmd = new byte[1];
             port.readBytes(cmd, 1);
             int command = unsign(cmd[0]);
@@ -608,6 +615,7 @@ public class DriverStation
                 M1.setText("M1: " + motorValues[1]);
                 M2.setText("M2: " + motorValues[2]);
                 M3.setText("M3: " + motorValues[3]);
+                System.out.println("CMV");
             } else if (command == 8)//CURRENT MPU READINGS
             {
                 byte[] readings = new byte[3];
@@ -623,6 +631,7 @@ public class DriverStation
                 currentYaw.setText(readings[0] + "");
                 currentPitch.setText(readings[1] + "");
                 currentRoll.setText(readings[2] + "");
+                System.out.println("MPU");
             } else if (command == 7) //MESSAGE INTO CONSOLE
             {
                 byte[] sizeSigned = new byte[1];
@@ -641,6 +650,7 @@ public class DriverStation
                 String s = "";
                 for (byte b : strArr) s += (char) unsign(b);
                 printToConsole(s);
+                System.out.println("MSG");
             }
         } catch (Exception e)
         {
@@ -720,7 +730,7 @@ public class DriverStation
         POVYAxis.setValue((int) (controller.getPovY() * -1));
         POVYVal = controller.getPovY() * -1;
 
-        //Send trim controls
+//        Send trim controls
         if (POVYVal == 1 && POVXValLast == 0 && POVYValLast == 0)
             send(new byte[]{5, 0});
         else if (POVXVal == 1 && POVXValLast == 0 && POVYValLast == 0)
@@ -731,6 +741,13 @@ public class DriverStation
             send(new byte[]{5, 3});
         POVXValLast = POVXVal;
         POVYValLast = POVYVal;
+
+        if (Btn4 && !Btn4Last)
+            send(new byte[]{6, 0});
+        else if (Btn5 && !Btn5Last)
+            send(new byte[]{6, 1});
+        Btn4Last = Btn4;
+        Btn5Last = Btn5;
 
         //Update Elapsed Time if enabled
         if (continueClock)
@@ -1229,6 +1246,8 @@ public class DriverStation
         PitchD = new JTextField();
         PIDPanel.add(PitchD, new com.intellij.uiDesigner.core.GridConstraints(26, 6, 4, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         RollP = new JTextField();
+        RollP.setText("");
+        RollP.setVisible(true);
         PIDPanel.add(RollP, new com.intellij.uiDesigner.core.GridConstraints(38, 2, 6, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         RollI = new JTextField();
         RollI.setText("");
@@ -1536,8 +1555,3 @@ abstract class TimeLimitedCodeBlock {
 
     public abstract void codeBlock();
 }
-
-
-/*
-TODO: change PID apply so it doesn't set everything to 0 if a part is left blank
- */

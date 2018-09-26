@@ -11,8 +11,6 @@
 #endif
 MPU6050 mpu;
 #define OUTPUT_READABLE_YAWPITCHROLL
-//#define OUTPUT_READABLE_REALACCEL
-//#define OUTPUT_READABLE_WORLDACCEL
 volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
 void dmpDataReady() {
     mpuInterrupt = true;
@@ -41,9 +39,9 @@ Servo ESCFR, ESCFL, ESCBL, ESCBR;
 float yawkp = 0;
 float yawki = 0;
 float yawkd = 0;
-float kp = 55.0;
-float ki = 17.0;
-float kd = 230.0;
+float kp = 50.0;
+float ki = 0.0;
+float kd = 490.0;
 long lastTime = 0;
 double IntegralYaw = 0;
 double IntegralPitch = 0;
@@ -57,10 +55,13 @@ double currentRoll = 0;
 double yawOffset = 0;
 double pitchOffset = 0;
 double rollOffset = 0;
+double yawTrim = 0;
 double lastErrorYaw = 0;
 double lastErrorPitch = 0;
 double lastErrorRoll = 0;
 double lastYaw = 0;
+double lastPitch = 0;
+double lastRoll = 0;
 double XAxis = 0;
 double YAxis = 0;
 double RXAxis = 0;
@@ -82,7 +83,8 @@ long lastSend = 0;
 long lastSentTime = 0;
 long timeout = 200;
 long updateFrequency = 100;
-long sampleTime = 7;
+long receiveTimeout = 100;
+long sampleTime = 0;
 
 boolean enabled = false;
 
@@ -95,9 +97,9 @@ void setup() {
   pinMode(7, OUTPUT); //CMD
   digitalWrite(7, HIGH); //CMD
   
-//  ESCBL.attach(6); //Change to PWM pins //FR
+  ESCBL.attach(6); //Change to PWM pins //FR
   ESCFL.attach(5);						//FL
-//  ESCFR.attach(4);						//BL
+  ESCFR.attach(4);						//BL
   ESCBR.attach(3);						//BR
   setSpeedFR(0);
   setSpeedFL(0);
@@ -112,19 +114,19 @@ void setup() {
 }
 
 void loop() {
-  mpuLoop();
   receiveCommands();
   if(millis() - lastSend > sendPeriod) {
     sendUpdates();
     lastSend = millis(); 
   }
   if(millis() - lastCommandTime > timeout) disable();
-//  if(enabled) {
-//    if(millis() - lastTime >= sampleTime) {
+  mpuLoop();
+  if(enabled) {
+    if(millis() - lastTime >= sampleTime) {
       drive();
-//      lastTime = millis();
-//    }
-//  }
+      lastTime = millis();
+    }
+  }
 }
 
 void send(byte toSend[], int length) {
@@ -143,7 +145,6 @@ byte calculateChecksum(byte arr[], int length)
       sum += arr[i];
     return sum;
 }
-
 
 void sendConsole(String s) 
 {
@@ -210,7 +211,6 @@ void receiveCommands() {
   		Serial.flush();
 		  return;
 	  }
-    digitalWrite(4, LOW);
     calibrateMPU();
     return;
   }
@@ -305,20 +305,38 @@ void receiveCommands() {
       Serial.flush();
       return;
     }
-    sendConsole(String(currentPitch));
-    if(holder[0] == 0) pitchOffset += .2;
-    else if(holder[0] == 1) rollOffset -= .2;
-    else if(holder[0] == 2) pitchOffset += .2;
-    else if(holder[0] == 3) rollOffset -= .2;
+    if(holder[0] == 0) pitchOffset += .5;
+    else if(holder[0] == 1) rollOffset -= .5;
+    else if(holder[0] == 2) pitchOffset -= .5;
+    else if(holder[0] == 3) rollOffset += .5;
+  }
+  if(command == 0x6) //set trim
+  {
+    byte holder[1];
+    readSerial(holder, 1);
+    byte checksum[1];
+    readSerial(checksum, 1);
+    byte calculatedChecksum = calculateChecksum(holder, 1) + command;
+    if (calculatedChecksum != checksum[0]) {
+      Serial.flush();
+      return;
+    }
+    if(holder[0] == 0) yawTrim -= 1;
+    else if(holder[0] == 1) yawTrim += 1;
   }
 }
 
 void readSerial(byte arr[], int numToRead) {
   byte temp[1];  
+  long lastReceived = millis();
   for(int i = 0; i < numToRead; i++) {
-    if(Serial.available() > 0) Serial.readBytes(temp, 1);
+    if(Serial.available() > 0) {
+      Serial.readBytes(temp, 1);
+      lastReceived = millis();
+    }
     else {
       i--;
+      if(millis() - lastReceived >= receiveTimeout) break;
       continue;
     }
     arr[i] = temp[0];
@@ -362,51 +380,54 @@ void updateGyroValues() {
 int printLoop = 0;
 
 void drive() {
-  if(RYAxis > 100) RYAxis = map(RYAxis, 156, 250, -100, 0);
-  if(RXAxis > 100) RXAxis = map(RXAxis, 156, 250, -100, 0);
-  double FROutput = YAxis;
-  double FLOutput = YAxis;
-  double BLOutput = YAxis;
-  double BROutput = YAxis;
-
-  //pitch calculations
-  expectedPitch = map(RYAxis, -100, 100, -5, 5);
-  double errorPitch = currentPitch - expectedPitch;
-  double changeErrorPitch = errorPitch - lastErrorPitch;
-  lastErrorPitch = errorPitch;
-  IntegralPitch += ki * errorPitch / 100000.
-  if(IntegralPitch > maxIntegral) IntegralPitch = maxIntegral;
-  if(IntegralPitch < -maxIntegral) IntegralPitch = -maxIntegral;
+  if(currentPitch != lastPitch && currentRoll != lastRoll) {
+    if(RYAxis > 100) RYAxis = map(RYAxis, 156, 250, -100, 0);
+    if(RXAxis > 100) RXAxis = map(RXAxis, 156, 250, -100, 0);
+    float FROutput = YAxis;
+    float FLOutput = YAxis;
+    float BLOutput = YAxis;
+    float BROutput = YAxis;
   
-  double pitchPIDOutput = kp * errorPitch/1000. + IntegralPitch + kd * changeErrorPitch/100.;
-  if(pitchPIDOutput > maxPID) pitchPIDOutput = maxPID;
-  if(pitchPIDOutput < -maxPID) pitchPIDOutput = -maxPID;
-  FROutput += pitchPIDOutput;
-  FLOutput += pitchPIDOutput;
-  BLOutput += -pitchPIDOutput;
-  BROutput += -pitchPIDOutput;
-
-  //roll calculations
-  expectedRoll = map(RXAxis, -100, 100, 5, -5);
-  double errorRoll = currentRoll - expectedRoll;
-  IntegralRoll += ki * errorRoll / 100000.;
-  double changeErrorRoll = errorRoll - lastErrorRoll;
-  lastErrorRoll = errorRoll;
-  if(IntegralRoll > maxIntegral) IntegralRoll = maxIntegral;
-  if(IntegralRoll < -maxIntegral) IntegralRoll = -maxIntegral;
- 
-  double rollPIDOutput = kp * errorRoll/1000. + IntegralRoll + kd * changeErrorRoll/100.;
-  if(rollPIDOutput > maxPID) rollPIDOutput = maxPID;
-  if(rollPIDOutput < -maxPID) rollPIDOutput = -maxPID;
-  FROutput += -rollPIDOutput;
-  FLOutput += rollPIDOutput;
-  BLOutput += rollPIDOutput;
-  BROutput += -rollPIDOutput;
-
-  setSpeedFR(FROutput);
-  setSpeedFL(FLOutput);
-  setSpeedBL(BLOutput);
-  setSpeedBR(BROutput);
+    //pitch calculations
+    expectedPitch = map(RYAxis, -100, 100, -20, 20);
+    double errorPitch = currentPitch - expectedPitch;
+    double changeErrorPitch = errorPitch - lastErrorPitch;
+    IntegralPitch += ki * errorPitch / 100000.;
+    if(IntegralPitch > maxIntegral) IntegralPitch = maxIntegral;
+    if(IntegralPitch < -maxIntegral) IntegralPitch = -maxIntegral;
+  
+    float pitchPIDOutput = kp * errorPitch/1000. + IntegralPitch + kd * changeErrorPitch/100.;
+    lastErrorPitch = errorPitch;
+    if(pitchPIDOutput > maxPID) pitchPIDOutput = maxPID;
+    if(pitchPIDOutput < -maxPID) pitchPIDOutput = -maxPID;
+  
+    //roll calculations
+    expectedRoll = map(RXAxis, -100, 100, 20, -20);
+    double errorRoll = currentRoll - expectedRoll;
+    double changeErrorRoll = errorRoll - lastErrorRoll;
+    IntegralRoll += ki * errorRoll / 100000.;
+    if(IntegralRoll > maxIntegral) IntegralRoll = maxIntegral;
+    if(IntegralRoll < -maxIntegral) IntegralRoll = -maxIntegral;
+   
+    float rollPIDOutput = kp * errorRoll/1000. + IntegralRoll + kd * changeErrorRoll/100.;
+    lastErrorRoll = errorRoll;
+    if(rollPIDOutput > maxPID) rollPIDOutput = maxPID;
+    if(rollPIDOutput < -maxPID) rollPIDOutput = -maxPID;
+    
+    FROutput += pitchPIDOutput - rollPIDOutput + yawTrim;
+    FLOutput += pitchPIDOutput + rollPIDOutput - yawTrim;
+    BLOutput += -pitchPIDOutput + rollPIDOutput + yawTrim;
+    BROutput += -pitchPIDOutput - rollPIDOutput - yawTrim;
+  
+    setSpeedFR(FROutput);
+    setSpeedFL(FLOutput);
+    setSpeedBL(BLOutput);
+    setSpeedBR(BROutput);
+  
+    lastYaw = currentYaw;
+    lastPitch = currentPitch;
+    lastRoll = currentRoll;
+  }
 }
 
 void calibrateMPU()
@@ -414,6 +435,7 @@ void calibrateMPU()
   yawOffset += currentYaw;
   pitchOffset += currentPitch;
   rollOffset += currentRoll;
+  yawTrim = 0;
   currentYaw = 0;
   currentPitch = 0;
   currentRoll = 0;
@@ -467,26 +489,14 @@ void setSpeedBR(double speed) {
 
 void mpuSetup()
 {
-	// join I2C bus (I2Cdev library doesn't do this automatically)
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+  Wire.setClock(400000L);
 	Wire.begin();
-	Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
-#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-	Fastwire::setup(400, true);
-#endif
 
-	// initialize device
 	mpu.initialize();
 	pinMode(INTERRUPT_PIN, INPUT);
-
-	// verify connection
 	sendConsole(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
-
-	// load and configure the DMP
 	sendConsole(F("Initializing DMP..."));
 	devStatus = mpu.dmpInitialize();
-
-	// supply your own gyro offsets here, scaled for min sensitivity
 	mpu.setXAccelOffset(-4271);
 	mpu.setYAccelOffset(-1550);
 	mpu.setZAccelOffset(1912);
@@ -494,21 +504,11 @@ void mpuSetup()
 	mpu.setYGyroOffset(-64);
 	mpu.setZGyroOffset(-83);
 
-	// make sure it worked (returns 0 if so)
 	if (devStatus == 0) {
-
-		// turn on the DMP, now that it's ready
 		mpu.setDMPEnabled(true);
-
-		// enable Arduino interrupt detection
-
 		attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
 		mpuIntStatus = mpu.getIntStatus();
-
-		// set our DMP Ready flag so the main loop() function knows it's okay to use it
 		dmpReady = true;
-
-		// get expected DMP packet size for later comparison
 		packetSize = mpu.dmpGetFIFOPacketSize();
 	}
 	else {
@@ -524,75 +524,27 @@ void mpuSetup()
 void mpuLoop()
 {
   if (!dmpReady) return;
-  //while (!mpuInterrupt && fifoCount < packetSize) {}
+  while (!mpuInterrupt && fifoCount < packetSize) {
+    
+  }
   mpuInterrupt = false;
     mpuIntStatus = mpu.getIntStatus();
 
-    // get current FIFO count
     fifoCount = mpu.getFIFOCount();
-
-    // check for overflow (this should never happen unless our code is too inefficient)
     if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
-        // reset so we can continue cleanly
         mpu.resetFIFO();
-//        sendConsole(F("FIFO overflow!"));
 
-    // otherwise, check for DMP data ready interrupt (this should happen frequently)
     } else if (mpuIntStatus & 0x02) {
-        // wait for correct available data length, should be a VERY short wait
         while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
-
-        // read a packet from FIFO
         mpu.getFIFOBytes(fifoBuffer, packetSize);
-        
-        // track FIFO count here in case there is > 1 packet available
-        // (this lets us immediately read more without waiting for an interrupt)
         fifoCount -= packetSize;
-
-        //GYRO READINGS
-            mpu.dmpGetQuaternion(&q, fifoBuffer);
-            mpu.dmpGetGravity(&gravity, &q);
-            mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-            //Serial.print("ypr\t");
-            //Serial.print(ypr[0] * 180/M_PI);
-            //Serial.print("\t");
-            //Serial.print(ypr[1] * 180/M_PI);
-            //Serial.print("\t");
-            //Serial.println(ypr[2] * 180/M_PI);
-            currentYaw = ypr[0] * 180/M_PI - yawOffset;
-            currentPitch = ypr[1] * 180/M_PI - pitchOffset;
-            currentRoll = ypr[2] * 180/M_PI - rollOffset;
-			
-
-            
-//        #ifdef OUTPUT_READABLE_REALACCEL
-//            // display real acceleration, adjusted to remove gravity
-//            mpu.dmpGetQuaternion(&q, fifoBuffer);
-//            mpu.dmpGetAccel(&aa, fifoBuffer);
-//            mpu.dmpGetGravity(&gravity, &q);
-//            mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-//            Serial.print("areal\t");
-//            Serial.print(aaReal.x);
-//            Serial.print("\t");
-//            Serial.print(aaReal.y);
-//            Serial.print("\t");
-//            Serial.println(aaReal.z);
-//        #endif
-//
-//        #ifdef OUTPUT_READABLE_WORLDACCEL
-//            // display initial world-frame acceleration, adjusted to remove gravity
-//            // and rotated based on known orientation from quaternion
-//            mpu.dmpGetQuaternion(&q, fifoBuffer);
-//            mpu.dmpGetAccel(&aa, fifoBuffer);
-//            mpu.dmpGetGravity(&gravity, &q);
-//            mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-//            mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-//            Serial.print("aworld\t");
-//            Serial.print(aaWorld.x);
-//            Serial.print("\t");
-//            Serial.print(aaWorld.y);
-//            Serial.print("\t");
-//            Serial.println(aaWorld.z);
-//        #endif
+        
+        mpu.dmpGetQuaternion(&q, fifoBuffer);
+        mpu.dmpGetGravity(&gravity, &q);
+        mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+        
+        currentYaw = ypr[0] * 180/M_PI - yawOffset;
+        currentPitch = ypr[1] * 180/M_PI - pitchOffset;
+        currentRoll = ypr[2] * 180/M_PI - rollOffset;
     }
 }
