@@ -122,7 +122,7 @@ public class DriverStation
     double yawkp, yawki, yawkd;
     double kp, ki, kd;
     double rollkp, rollki, rollkd;
-    int baudRate = 115200;
+    int baudRate = 57600;
     int selectedControllerPort = 0;
     ArrayDeque<Double> rollStorage = new ArrayDeque<>();
     ArrayDeque<Double> pitchStorage = new ArrayDeque<>();
@@ -484,7 +484,7 @@ public class DriverStation
                     while (true)
                     {
                         update();
-                        Thread.sleep(70);
+                        Thread.sleep(100);
                     }
                 } catch (Exception e)
                 {
@@ -511,6 +511,7 @@ public class DriverStation
         };
         updateLoop.start();
         receiveLoop.start();
+
     }
 
     private void enable()
@@ -582,6 +583,7 @@ public class DriverStation
         {
             byte[] packet = concatenate(toSend, new byte[]{calculateChecksum(toSend)});
             if (port != null) port.writeBytes(packet, packet.length);
+            System.out.println("Sent: " + Arrays.toString(toSend));
         } catch (Exception e)
         {
             if (errorReportLoopsCount++ == errorReportLoops)
@@ -597,7 +599,7 @@ public class DriverStation
     {
         byte sum = 0;
         for (byte b : arr)
-            sum += unsign(b);
+            sum += b;
         return sum;
     }
 
@@ -622,7 +624,7 @@ public class DriverStation
                     flush();
                     return;
                 }
-                BatteryVoltage.setText("Battery Voltage: " + (unsign(batteryValue[0]) / 10.) + "V");
+                BatteryVoltage.setText("Battery Voltage: " + (batteryValue[0] / 10.) + "V");
             } else if (command == 9) //CURRENT MOTOR VALUES
             {
                 byte[] motorValues = new byte[4];
@@ -682,7 +684,7 @@ public class DriverStation
     private void flush()
     {
         int toFlush = port.bytesAvailable();
-//        port.readBytes(new byte[toFlush], toFlush);
+        port.readBytes(new byte[toFlush], toFlush);
     }
 
     private byte[] concatenate(byte[] one, byte[] two)

@@ -9,7 +9,7 @@ public class SerialPortTest
     public static void main(String[] args)
     {
         for(SerialPort sp : SerialPort.getCommPorts()) System.out.println(sp.getSystemPortName());
-        SerialPort chosenPort = SerialPort.getCommPorts()[0];
+        SerialPort chosenPort = SerialPort.getCommPorts()[1];
         if(chosenPort.openPort())
         {
             System.out.println("Opened Port");
