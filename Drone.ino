@@ -35,7 +35,7 @@ float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 //========================================================================================================================================================
 
-SoftwareSerial hc12(8,9) //rx, tx
+SoftwareSerial hc12(8,9); //rx, tx
 Servo ESCFR, ESCFL, ESCBL, ESCBR;
 
 const int SetPin = 7;
@@ -97,8 +97,8 @@ double currentMotor3 = 0;
 long sendPeriod = 200;
 long lastSend = 0;
 long lastSentTime = 0;
-long timeout = 200;
-long updateFrequency = 100;
+long timeout = 500;
+long updateFrequency = 250;
 long receiveTimeout = 100;
 long sampleTime = 0;
 
@@ -108,8 +108,8 @@ boolean enabled = false;
 void setup() {
   pinMode(SetPin, OUTPUT);
   digitalWrite(SetPin, LOW);
-  hc12.begin(9600);
-  Serial.begin(38400);
+  hc12.begin(115200);
+  Serial.begin(115200);
   Serial.setTimeout(0);
   delay(1000);
   configureHC12();
@@ -150,7 +150,7 @@ void loop() {
 void configureHC12() {
   digitalWrite(SetPin, LOW);
   delay(10);
-  hc12.print("AT+B38400"); //set baud to 38400
+  hc12.print("AT+B115200"); //set baud
   delay(50);
   Serial.println(hc12.readString());
   hc12.print("AT+FU3"); //set transmission mode
@@ -161,10 +161,12 @@ void configureHC12() {
   Serial.println(hc12.readString());
   hc12.print("AT+RX"); //get all values
   delay(50);
+  hc12.print("AT+U8O1"); //set check bit
+  delay(50);
   Serial.println(hc12.readString());
   digitalWrite(SetPin, HIGH);
-  hc12.close();
-  hc12.begin(38400);
+  hc12.begin(115200);
+  hc12.setTimeout(0);
 }
 
 void send(byte toSend[], int length) {
@@ -172,8 +174,8 @@ void send(byte toSend[], int length) {
 	for(int i = 0; i < length; i++)
 		packet[i] = toSend[i];
 	packet[length] = calculateChecksum(packet, length);
-	Serial.write(packet, length+1);
-	Serial.flush();
+	hc12.write(packet, length+1);
+	clearData();
 }
 
 byte calculateChecksum(byte arr[], int length)
@@ -186,6 +188,7 @@ byte calculateChecksum(byte arr[], int length)
 
 void sendConsole(String s) 
 {
+  Serial.println(s);
 	int totalLength = s.length() + 2;
 	byte byt[s.length()+2];
 	byt[0] = 0x7;
@@ -203,6 +206,11 @@ byte cksum(byte buffer[], int numToCal)
 	return ck;
 }
 
+void clearData() {
+  byte trash[] = {};
+//  hc12.readBytes(trash, hc12.available());
+}
+
 void sendUpdates()
 {
 	if(millis() < lastSentTime + updateFrequency) return;
@@ -218,29 +226,13 @@ void sendUpdates()
 
 /*********************************************************************************************************/
 void receiveCommands() {
-  if (Serial.available() == 0) return;
+  if (hc12.available() == 0) return;
+  lastCommandTime = millis();
   byte cmd[1];
-  Serial.readBytes(cmd, 1);
+  hc12.readBytes(cmd, 1);
   byte command = cmd[0];
   if(command >= 0 && command < 6) lastCommandTime = millis();
-  lastCommandTime = millis();
-  if(command == 0x0) //enable / disable
-  {
-    byte holder[1];
-    Serial.readBytes(holder, 1);
-	  byte checksum[1];
-	  Serial.readBytes(checksum, 1);
-	  byte calculatedChecksum = holder[0] + command;
-	  if (calculatedChecksum != checksum[0])
-	  {
-   		Serial.flush();
-  		return;
-  	}
-//    if(holder[0] == 0x0 && enabled) disable();
-//    else if(holder[0] == 0x1 && !enabled) enable();
-    return;
-  }
-  else if(command == 0x1) //zero gyro
+  if(command == 0x1) //zero gyro
   {
     byte holder[2];
     readSerial(holder, 2);
@@ -249,7 +241,7 @@ void receiveCommands() {
 	  byte calculatedChecksum = calculateChecksum(holder, 2) + command;
 	  if (calculatedChecksum != checksum[0])
 	  {
-  		Serial.flush();
+  		clearData();
 		  return;
 	  }
     calibrateMPU();
@@ -264,7 +256,7 @@ void receiveCommands() {
 	  byte calculatedChecksum = calculateChecksum(holder, 5) + command;
 	  if (calculatedChecksum != checksum[0])
 	  {
-  		Serial.flush();
+  		clearData();
 		  return;
 	  }
     if(!enabled) enable();
@@ -283,10 +275,10 @@ void receiveCommands() {
 	  byte calculatedChecksum = calculateChecksum(holder, 4) + command;
   	if (calculatedChecksum != checksum[0])
   	{
-		   Serial.flush();
+		  clearData();
 		  return;
 	  }
-    if(enabled) disable();
+    if(enabled) enabled = false;
     XAxis = 0;
     YAxis = 0;
     RXAxis = 0;
@@ -301,7 +293,7 @@ void receiveCommands() {
     setSpeedFL(speedFL);
     setSpeedBL(speedBL);
     setSpeedBR(speedBR);
-   }
+  }
   else if(command == 0x4) //set PID constants
   {   
     byte holder[15];
@@ -311,8 +303,7 @@ void receiveCommands() {
 	  byte calculatedChecksum = calculateChecksum(holder, 15) + command;
 	  if (calculatedChecksum != checksum[0])
 	  {
-  		sendConsole("PID");
-		  Serial.flush();
+		  clearData();
 		  return;
 	  }
     long kp_sign = holder[0] == 0 ? 1 : -1;
@@ -343,7 +334,7 @@ void receiveCommands() {
     readSerial(checksum, 1);
     byte calculatedChecksum = calculateChecksum(holder, 1) + command;
     if (calculatedChecksum != checksum[0]) {
-      Serial.flush();
+      clearData();
       return;
     }
     if(holder[0] == 0) pitchOffset += .5;
@@ -359,7 +350,7 @@ void receiveCommands() {
     readSerial(checksum, 1);
     byte calculatedChecksum = calculateChecksum(holder, 1) + command;
     if (calculatedChecksum != checksum[0]) {
-      Serial.flush();
+      clearData();
       return;
     }
     if(holder[0] == 0) yawTrim -= 1;
@@ -371,8 +362,8 @@ void readSerial(byte arr[], int numToRead) {
   byte temp[1];  
   long lastReceived = millis();
   for(int i = 0; i < numToRead; i++) {
-    if(Serial.available() > 0) {
-      Serial.readBytes(temp, 1);
+    if(hc12.available() > 0) {
+      hc12.readBytes(temp, 1);
       lastReceived = millis();
     }
     else {
@@ -382,7 +373,7 @@ void readSerial(byte arr[], int numToRead) {
     }
     arr[i] = temp[0];
   }
-  Serial.flush();
+  clearData();
 }
 /*********************************************************************************************************/
 
@@ -405,6 +396,7 @@ void enable() {
 }
 
 void disable() {
+  sendConsole("NO");
   enabled = false;  
   setSpeedFR(0);  
   setSpeedFL(0);
@@ -489,7 +481,7 @@ void drive() {
     if(rollPIDOutput > maxPID) rollPIDOutput = maxPID;
     if(rollPIDOutput < -maxPID) rollPIDOutput = -maxPID;
     */
-    
+
     FROutput += pitchPIDOutputRate - rollPIDOutputRate + yawTrim;
     FLOutput += pitchPIDOutputRate + rollPIDOutputRate - yawTrim;
     BLOutput += -pitchPIDOutputRate + rollPIDOutputRate + yawTrim;
