@@ -113,6 +113,8 @@ public class DriverStation
     private JPanel Motors;
     private JButton mpuZeroButton;
     private JPanel GraphPanel;
+    private JLabel BatteryVoltage;
+    private JButton resetButton;
     SerialPort port = null;
     boolean droneEnabled = false;
     boolean continueClock = false;
@@ -227,6 +229,17 @@ public class DriverStation
         {
             e.printStackTrace();
         }
+        resetButton.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                port.closePort();
+                port.openPort();
+                port.setFlowControl(SerialPort.FLOW_CONTROL_DISABLED);
+                port.setBaudRate(baudRate);
+            }
+        });
 
         //set enter as a disable key
         Action disable = new AbstractAction()
@@ -598,8 +611,21 @@ public class DriverStation
             byte[] cmd = new byte[1];
             port.readBytes(cmd, 1);
             int command = unsign(cmd[0]);
-            if (command < 7 || command > 9) return;
-            if (command == 9) //CURRENT MOTOR VALUES
+            if (command < 7 || command > 0xA) return;
+            if (command == 0xA)
+            {
+                byte[] batteryValue = new byte[1];
+                port.readBytes(batteryValue, 1);
+                byte[] checkSum = new byte[1];
+                port.readBytes(checkSum, 1);
+                byte calculatedChecksum = (byte) (calculateChecksum(batteryValue) + command);
+                if (calculatedChecksum != checkSum[0])
+                {
+                    flush();
+                    return;
+                }
+                BatteryVoltage.setText("Battery Voltage: " + (batteryValue[0] / 10.) + "V");
+            } else if (command == 9) //CURRENT MOTOR VALUES
             {
                 byte[] motorValues = new byte[4];
                 port.readBytes(motorValues, 4);
@@ -615,7 +641,6 @@ public class DriverStation
                 M1.setText("M1: " + motorValues[1]);
                 M2.setText("M2: " + motorValues[2]);
                 M3.setText("M3: " + motorValues[3]);
-                System.out.println("CMV");
             } else if (command == 8)//CURRENT MPU READINGS
             {
                 byte[] readings = new byte[3];
@@ -631,7 +656,6 @@ public class DriverStation
                 currentYaw.setText(readings[0] + "");
                 currentPitch.setText(readings[1] + "");
                 currentRoll.setText(readings[2] + "");
-                System.out.println("MPU");
             } else if (command == 7) //MESSAGE INTO CONSOLE
             {
                 byte[] sizeSigned = new byte[1];
@@ -650,7 +674,6 @@ public class DriverStation
                 String s = "";
                 for (byte b : strArr) s += (char) unsign(b);
                 printToConsole(s);
-                System.out.println("MSG");
             }
         } catch (Exception e)
         {
@@ -1429,14 +1452,14 @@ public class DriverStation
         label54.setText("");
         Motors.add(label54, new com.intellij.uiDesigner.core.GridConstraints(11, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         DriverPanel = new JPanel();
-        DriverPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(9, 2, new Insets(0, 0, 0, 0), -1, -1));
+        DriverPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(9, 5, new Insets(0, 0, 0, 0), -1, -1));
         panelMain.add(DriverPanel, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         DriverPanel.setBorder(BorderFactory.createTitledBorder(" "));
         ElapsedTimeLabel = new JLabel();
         Font ElapsedTimeLabelFont = this.$$$getFont$$$(null, -1, 28, ElapsedTimeLabel.getFont());
         if (ElapsedTimeLabelFont != null) ElapsedTimeLabel.setFont(ElapsedTimeLabelFont);
         ElapsedTimeLabel.setText("Elapsed Time: 00:00:000");
-        DriverPanel.add(ElapsedTimeLabel, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        DriverPanel.add(ElapsedTimeLabel, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 5, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         Enable_Status = new JButton();
         Enable_Status.setBackground(new Color(-11842741));
         Enable_Status.setFocusPainted(false);
@@ -1447,35 +1470,40 @@ public class DriverStation
         Enable_Status.setMargin(new Insets(2, 14, 2, 14));
         Enable_Status.setText("Disabled");
         Enable_Status.setVerifyInputWhenFocusTarget(true);
-        DriverPanel.add(Enable_Status, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        DriverPanel.add(Enable_Status, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 5, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        BatteryVoltage = new JLabel();
+        BatteryVoltage.setEnabled(true);
+        Font BatteryVoltageFont = this.$$$getFont$$$(null, -1, 28, BatteryVoltage.getFont());
+        if (BatteryVoltageFont != null) BatteryVoltage.setFont(BatteryVoltageFont);
+        BatteryVoltage.setText("Battery Voltage: 0.00 V");
+        DriverPanel.add(BatteryVoltage, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 5, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label55 = new JLabel();
-        label55.setEnabled(true);
-        Font label55Font = this.$$$getFont$$$(null, -1, 28, label55.getFont());
-        if (label55Font != null) label55.setFont(label55Font);
-        label55.setText("Battery Voltage: 0.00 V");
-        DriverPanel.add(label55, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label56 = new JLabel();
-        label56.setText("Select Antenna COM Port");
-        DriverPanel.add(label56, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label55.setText("Select Antenna COM Port");
+        DriverPanel.add(label55, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         COMCombo.setLightWeightPopupEnabled(true);
-        DriverPanel.add(COMCombo, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        DriverPanel.add(COMCombo, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         ConsoleScrollPane = new JScrollPane();
-        DriverPanel.add(ConsoleScrollPane, new com.intellij.uiDesigner.core.GridConstraints(8, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        DriverPanel.add(ConsoleScrollPane, new com.intellij.uiDesigner.core.GridConstraints(8, 0, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         Console = new JTextPane();
         Console.setEditable(false);
         ConsoleScrollPane.setViewportView(Console);
-        DriverPanel.add(ControllerCombo, new com.intellij.uiDesigner.core.GridConstraints(6, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label57 = new JLabel();
-        label57.setText("Select Controller");
-        DriverPanel.add(label57, new com.intellij.uiDesigner.core.GridConstraints(5, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        controllerWarningPanel = new JPanel();
-        controllerWarningPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        DriverPanel.add(controllerWarningPanel, new com.intellij.uiDesigner.core.GridConstraints(6, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        DriverPanel.add(ControllerCombo, new com.intellij.uiDesigner.core.GridConstraints(6, 0, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label56 = new JLabel();
+        label56.setText("Select Controller");
+        DriverPanel.add(label56, new com.intellij.uiDesigner.core.GridConstraints(5, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         mpuZeroButton = new JButton();
         Font mpuZeroButtonFont = this.$$$getFont$$$(null, Font.BOLD, 18, mpuZeroButton.getFont());
         if (mpuZeroButtonFont != null) mpuZeroButton.setFont(mpuZeroButtonFont);
         mpuZeroButton.setText("Calibrate Gyroscope and Accelerometer");
-        DriverPanel.add(mpuZeroButton, new com.intellij.uiDesigner.core.GridConstraints(7, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        DriverPanel.add(mpuZeroButton, new com.intellij.uiDesigner.core.GridConstraints(7, 0, 1, 5, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        resetButton = new JButton();
+        resetButton.setText("Reset");
+        DriverPanel.add(resetButton, new com.intellij.uiDesigner.core.GridConstraints(3, 2, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        controllerWarningPanel = new JPanel();
+        controllerWarningPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        DriverPanel.add(controllerWarningPanel, new com.intellij.uiDesigner.core.GridConstraints(5, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer5 = new com.intellij.uiDesigner.core.Spacer();
+        DriverPanel.add(spacer5, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
     }
 
     /**

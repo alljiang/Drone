@@ -3,6 +3,7 @@
  * http://brettbeauregard.com/blog/2011/04/improving-the-beginners-pid-introduction/
  */
 #include <Servo.h>
+#include <SoftwareSerial.h>
 //=========================================MPU STUFF======================================================================================================
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
@@ -34,24 +35,32 @@ float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 //========================================================================================================================================================
 
+SoftwareSerial hc12(8,9) //rx, tx
 Servo ESCFR, ESCFL, ESCBL, ESCBR;
 
+const int SetPin = 7;
 float yawkp = 0;
 float yawki = 0;
 float yawkd = 0;
-float kp = 50.0;
+float kp = 0.0;
 float ki = 0.0;
-float kd = 490.0;
+float kd = 0.0;
 long lastTime = 0;
 double IntegralYaw = 0;
 double IntegralPitch = 0;
 double IntegralRoll = 0;
+double IntegralYawRate = 0;
+double IntegralPitchRate = 0;
+double IntegralRollRate = 0;
 double expectedYaw = 0;
 double expectedPitch = 0;
 double expectedRoll = 0;
 double currentYaw = 0;
 double currentPitch = 0;
 double currentRoll = 0;
+double currentYawRate = 0;
+double currentPitchRate = 0;
+double currentRollRate = 0;
 double yawOffset = 0;
 double pitchOffset = 0;
 double rollOffset = 0;
@@ -59,9 +68,15 @@ double yawTrim = 0;
 double lastErrorYaw = 0;
 double lastErrorPitch = 0;
 double lastErrorRoll = 0;
+double lastErrorYawRate = 0;
+double lastErrorPitchRate = 0;
+double lastErrorRollRate = 0;
 double lastYaw = 0;
 double lastPitch = 0;
 double lastRoll = 0;
+double lastYawRate = 0;
+double lastPitchRate = 0;
+double lastRollRate = 0;
 double XAxis = 0;
 double YAxis = 0;
 double RXAxis = 0;
@@ -73,6 +88,7 @@ int POVYAxis = 0;
 long lastCommandTime = 0;
 double maxPID = 30;
 double maxIntegral = 10;
+double maxIntegralRate = 10;
 double currentMotor0 = 0;
 double currentMotor1 = 0;
 double currentMotor2 = 0;
@@ -88,19 +104,21 @@ long sampleTime = 0;
 
 boolean enabled = false;
 
-void setup() {
 
-  delay(1000);
-  Serial.begin(57600);
+void setup() {
+  pinMode(SetPin, OUTPUT);
+  digitalWrite(SetPin, LOW);
+  hc12.begin(9600);
+  Serial.begin(38400);
   Serial.setTimeout(0);
+  delay(1000);
+  configureHC12();
   sendConsole("Started");
-  pinMode(7, OUTPUT); //CMD
-  digitalWrite(7, HIGH); //CMD
   
-  ESCBL.attach(6); //Change to PWM pins //FR
-  ESCFL.attach(5);						//FL
-  ESCFR.attach(4);						//BL
-  ESCBR.attach(3);						//BR
+//  ESCFR.attach(6); //FR
+  ESCFL.attach(5); //FL
+//  ESCBL.attach(4); //BL
+  ESCBR.attach(3); //BR
   setSpeedFR(0);
   setSpeedFL(0);
   setSpeedBL(0);
@@ -127,6 +145,26 @@ void loop() {
       lastTime = millis();
     }
   }
+}
+
+void configureHC12() {
+  digitalWrite(SetPin, LOW);
+  delay(10);
+  hc12.print("AT+B38400"); //set baud to 38400
+  delay(50);
+  Serial.println(hc12.readString());
+  hc12.print("AT+FU3"); //set transmission mode
+  delay(50);
+  Serial.println(hc12.readString());
+  hc12.print("AT+P8"); //set transmission power to max
+  delay(50);
+  Serial.println(hc12.readString());
+  hc12.print("AT+RX"); //get all values
+  delay(50);
+  Serial.println(hc12.readString());
+  digitalWrite(SetPin, HIGH);
+  hc12.close();
+  hc12.begin(38400);
 }
 
 void send(byte toSend[], int length) {
@@ -169,8 +207,11 @@ void sendUpdates()
 {
 	if(millis() < lastSentTime + updateFrequency) return;
 	lastSentTime = millis();
+  float voltage = getBatteryVoltage();
+  byte battery[] = {0xA, (byte)(voltage*10)};
 	byte motors[] = {0x9, (byte)currentMotor0, (byte)currentMotor1, (byte)currentMotor2, (byte)currentMotor3};
 	byte mpu[] = {0x8, (byte)currentYaw, (byte)currentPitch, (byte)currentRoll};
+  send(battery, 2);
 	send(motors, 5);
 	send(mpu, 4);
 }
@@ -389,6 +430,40 @@ void drive() {
     float BROutput = YAxis;
   
     //pitch calculations
+    double expectedPitchRate = map(RYAxis, -100, 100, -100, 100);
+    double errorPitchRate = currentPitchRate - expectedPitchRate;
+    double changeErrorPitchRate = errorPitchRate - lastErrorPitchRate;
+    IntegralPitchRate += ki * errorPitchRate / 10000.;
+    if(IntegralPitchRate > maxIntegralRate) IntegralPitchRate = maxIntegralRate;
+    if(IntegralPitchRate < -maxIntegralRate) IntegralPitchRate = -maxIntegralRate;
+  
+    float pitchPIDOutputRate = kp * errorPitchRate/100. + IntegralPitchRate + kd * changeErrorPitchRate/100.;
+    lastErrorPitchRate = errorPitchRate;
+    if(pitchPIDOutputRate > maxPID) pitchPIDOutputRate = maxPID;
+    if(pitchPIDOutputRate < -maxPID) pitchPIDOutputRate = -maxPID;
+    
+    //roll calculations
+    double expectedRollRate = map(RXAxis, -100, 100, 100, -100);
+    double errorRollRate = currentRollRate - expectedRollRate;
+    double changeErrorRollRate = errorRollRate - lastErrorRollRate;
+    IntegralRollRate += ki * errorRollRate / 100000.;
+    if(IntegralRollRate > maxIntegralRate) IntegralRollRate = maxIntegralRate;
+    if(IntegralRollRate < -maxIntegralRate) IntegralRollRate = -maxIntegralRate;
+   
+    float rollPIDOutputRate = kp * errorRollRate/100. + IntegralRollRate/100. + kd * changeErrorRollRate/100.;
+    lastErrorRollRate = errorRollRate;
+    if(rollPIDOutputRate > maxPID) rollPIDOutputRate = maxPID;
+    if(rollPIDOutputRate < -maxPID) rollPIDOutputRate = -maxPID;
+  /*
+  if(currentPitch != lastPitch && currentRoll != lastRoll) {
+    if(RYAxis > 100) RYAxis = map(RYAxis, 156, 250, -100, 0);
+    if(RXAxis > 100) RXAxis = map(RXAxis, 156, 250, -100, 0);
+    float FROutput = YAxis;
+    float FLOutput = YAxis;
+    float BLOutput = YAxis;
+    float BROutput = YAxis;
+  
+    //pitch calculations
     expectedPitch = map(RYAxis, -100, 100, -20, 20);
     double errorPitch = currentPitch - expectedPitch;
     double changeErrorPitch = errorPitch - lastErrorPitch;
@@ -413,11 +488,12 @@ void drive() {
     lastErrorRoll = errorRoll;
     if(rollPIDOutput > maxPID) rollPIDOutput = maxPID;
     if(rollPIDOutput < -maxPID) rollPIDOutput = -maxPID;
+    */
     
-    FROutput += pitchPIDOutput - rollPIDOutput + yawTrim;
-    FLOutput += pitchPIDOutput + rollPIDOutput - yawTrim;
-    BLOutput += -pitchPIDOutput + rollPIDOutput + yawTrim;
-    BROutput += -pitchPIDOutput - rollPIDOutput - yawTrim;
+    FROutput += pitchPIDOutputRate - rollPIDOutputRate + yawTrim;
+    FLOutput += pitchPIDOutputRate + rollPIDOutputRate - yawTrim;
+    BLOutput += -pitchPIDOutputRate + rollPIDOutputRate + yawTrim;
+    BROutput += -pitchPIDOutputRate - rollPIDOutputRate - yawTrim;
   
     setSpeedFR(FROutput);
     setSpeedFL(FLOutput);
@@ -427,6 +503,16 @@ void drive() {
     lastYaw = currentYaw;
     lastPitch = currentPitch;
     lastRoll = currentRoll;
+
+    lastPitchRate = currentPitchRate;
+    lastRollRate = currentRollRate;
+  }
+}
+
+void slowSendConsole(String str, int skips) {
+  if(printLoop++ >= skips) {
+    sendConsole(str);
+    printLoop = 0;
   }
 }
 
@@ -445,6 +531,12 @@ void calibrateMPU()
   lastErrorYaw = 0;
   lastErrorPitch = 0;
   lastErrorRoll = 0;
+  IntegralYawRate = 0;
+  IntegralPitchRate = 0;
+  IntegralRollRate = 0;
+  lastErrorYawRate = 0;
+  lastErrorPitchRate = 0;
+  lastErrorRollRate = 0;
   lastYaw = 0;
 }
 
@@ -480,6 +572,17 @@ void setSpeedBR(double speed) {
   ESCBR.writeMicroseconds(toWrite);
 }
 
+float getBatteryVoltage() {
+  analogReference(INTERNAL); //reference from 1.1V
+  double ADCVal = analogRead(A7);
+  float val = (ADCVal / 1024.) * 1.1 / (737./(9700.+737.)); //R1 = 9.7k  R2 = 737
+  double a = -0.0033;
+  double b = 1.0785;
+  double c = -0.305;
+  float output = ((a*val*val + b*val + c*2)*10)/10;
+  if(output < 5.5) output = 0; //probably just voltage from the usb input
+  return output;
+}
 
 //========================================================MPU 6050 GYRO AND ACCELEROMETER=================================================================
 //========================================================================================================================================================
@@ -497,12 +600,12 @@ void mpuSetup()
 	sendConsole(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
 	sendConsole(F("Initializing DMP..."));
 	devStatus = mpu.dmpInitialize();
-	mpu.setXAccelOffset(-4271);
-	mpu.setYAccelOffset(-1550);
-	mpu.setZAccelOffset(1912);
-	mpu.setXGyroOffset(-175);
-	mpu.setYGyroOffset(-64);
-	mpu.setZGyroOffset(-83);
+	mpu.setXAccelOffset(-4004);
+	mpu.setYAccelOffset(-1632);
+	mpu.setZAccelOffset(1952);
+	mpu.setXGyroOffset(-179);
+	mpu.setYGyroOffset(-84);
+	mpu.setZGyroOffset(-47);
 
 	if (devStatus == 0) {
 		mpu.setDMPEnabled(true);
@@ -523,6 +626,7 @@ void mpuSetup()
 
 void mpuLoop()
 {
+
   if (!dmpReady) return;
   while (!mpuInterrupt && fifoCount < packetSize) {
     
@@ -546,5 +650,13 @@ void mpuLoop()
         currentYaw = ypr[0] * 180/M_PI - yawOffset;
         currentPitch = ypr[1] * 180/M_PI - pitchOffset;
         currentRoll = ypr[2] * 180/M_PI - rollOffset;
+
+        currentYawRate = currentYawRate*.7+ (-mpu.getRotationZ()/65.5)*.3;
+        currentPitchRate = currentPitchRate*.7+ (-mpu.getRotationY()/65.5)*.3;
+        currentRollRate = currentRollRate*.7+ (mpu.getRotationX()/65.5)*.3;
+        
+        currentYaw = currentYawRate;
+        currentPitch = currentPitchRate;
+        currentRoll = currentRollRate;
     }
 }
