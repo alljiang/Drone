@@ -17,16 +17,19 @@ void setup() {
   Serial.begin(receiveBaud);
   hc12.begin(sendBaud);
   delay(1000);
-  configureHC12();
   digitalWrite(HC12SetPin, HIGH);
 }
 
 void loop() {
-  if(Serial.available()) {
-    mySerial.write(Serial.read());
+  if(Serial.available() > 0) {
+    byte toSend[1];
+    Serial.readBytes(toSend, 1);
+    hc12.write(toSend[0]);
   }
-  if(mySerial.available()) {
-    Serial.write(mySerial.read());
+  if(hc12.available()) {
+    byte toSend[1];
+    hc12.readBytes(toSend, 1);
+    Serial.write(toSend[0]);
   }
 }
 
@@ -49,46 +52,3 @@ void send(byte toSend[], int length) {
   Serial.write(packet, length+1);
   Serial.flush();
 }
-
-void configureHC12() {
-  digitalWrite(HC12SetPin, LOW);
-  delay(5);
-  setBaud(57600);
-  setMode(3);
-  setPower(8);
-  sendConfig();
-  digitalWrite(HC12SetPin, HIGH);
-  hc12.close();
-  hc12.begin(57600);
-}
-
-void testHC12() {
-  clearData();
-  delay(50);
-  hc12.print("AT");
-  if(hc12.available() > 0}
-  
-}
-
-void setBaud(long baud) {
-  hc12.print("AT+B" + String(baud));
-}
-
-void setMode(int mode) {
-  hc12.print("AT+FU" + String(mode));
-}
-
-void setPower(int power) {
-  hc12.print("AT+P" + String(power));
-}
-
-void sendConfig() {
-  hc12.print("AT+RX");
-}
-
-void clearData() {
-  byte trash[] = {};
-  hc12.readBytes(trash, hc12.available());
-  }
-}
-

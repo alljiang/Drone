@@ -79,6 +79,8 @@ public class DriverStation
     private boolean Btn12; //HOMEBTN
     private boolean Btn4Last = false;
     private boolean Btn5Last = false;
+    private boolean Btn6Last = false;
+    private boolean Btn7Last = false;
     private JProgressBar POVXAxis;
     private JProgressBar POVYAxis;
     private JLabel CurrentYawI;
@@ -213,6 +215,9 @@ public class DriverStation
             kp = Double.parseDouble(st.nextToken());
             ki = Double.parseDouble(st.nextToken());
             kd = Double.parseDouble(st.nextToken());
+            yawkp = Double.parseDouble(st.nextToken());
+            yawki = Double.parseDouble(st.nextToken());
+            yawkd = Double.parseDouble(st.nextToken());
             rollkp = kp;
             rollki = ki;
             rollkd = kd;
@@ -681,6 +686,16 @@ public class DriverStation
         }
     }
 
+    private byte[] readBytes(int numToRead)
+    {
+        byte[] toReturn = new byte[numToRead];
+        while (port.bytesAvailable() > 0)
+        {
+            port.readBytes(toReturn, 4);
+        }
+        return toReturn;
+    }
+
     private void flush()
     {
         int toFlush = port.bytesAvailable();
@@ -737,17 +752,17 @@ public class DriverStation
         Controller controller = Controllers.getController(selectedControllerPort);
         XAxis.setValue((int) (controller.getXAxisValue() * 10000));
         XAxisVal = controller.getXAxisValue() * 100;
-        YAxis.setValue((int) (controller.getYAxisValue() * -10000));
-        YAxisVal = controller.getYAxisValue() * -100;
+        if (controller.getAxisCount() > 0) YAxis.setValue((int) (controller.getAxisValue(2) * -10000));
+        if (controller.getAxisCount() > 0) YAxisVal = controller.getAxisValue(2) * -100;
         RXAxis.setValue((int) (controller.getZAxisValue() * 10000));
         RXAxisVal = controller.getZAxisValue() * 100;
-        RYAxis.setValue((int) (controller.getRZAxisValue() * -10000));
-        RYAxisVal = controller.getRZAxisValue() * -100;
+        if (controller.getAxisCount() > 0) RYAxis.setValue((int) (controller.getAxisValue(0) * -10000));
+        if (controller.getAxisCount() > 0) RYAxisVal = controller.getAxisValue(0) * -100;
         if (Math.abs(XAxisVal) == 100 || Math.abs(YAxisVal) == 100 || Math.abs(RXAxisVal) == 100 || Math.abs(RYAxisVal) == 100)
             controllerWarningPanel.setBackground(new Color(0xff0007));
         else
             controllerWarningPanel.setBackground(new Color(0x3C3F41));
-        if (controller.getButtonCount() == 13) updateControllerButtons(controller);
+        if (controller.getButtonCount() > 0) updateControllerButtons(controller);
         POVXAxis.setValue((int) (controller.getPovX()));
         POVXVal = controller.getPovX();
         POVYAxis.setValue((int) (controller.getPovY() * -1));
@@ -765,9 +780,9 @@ public class DriverStation
         POVXValLast = POVXVal;
         POVYValLast = POVYVal;
 
-        if (Btn4 && !Btn4Last)
+        if (Btn6 && !Btn6Last)
             send(new byte[]{6, 0});
-        else if (Btn5 && !Btn5Last)
+        else if (Btn7 && !Btn7Last)
             send(new byte[]{6, 1});
         Btn4Last = Btn4;
         Btn5Last = Btn5;
@@ -798,7 +813,7 @@ public class DriverStation
             send(toSend);
         }
 
-        if (Btn12) disable();
+        if (Btn8) disable();
         if (Btn3) zeroMPU();
 
         Speed0.setText(MotorController0.getValue() + "");
@@ -900,7 +915,7 @@ public class DriverStation
             BtnStatus9.setBackground(new Color(0x4B4B4B));
         }
         if (controller.isButtonPressed(10))
-        {
+            {
             Btn10 = true;
             BtnStatus10.setBackground(new Color(0x64ff00));
         } else
@@ -930,7 +945,7 @@ public class DriverStation
 
     private String updatePID()
     {
-        String text = kp + " " + ki + " " + kd;
+        String text = kp + " " + ki + " " + kd + " " + yawkp + " " + yawki + " " + yawkd;
         printToConsole("Set PID to: " + text);
         byte[] toSend = new byte[]{4,
                 (byte) (kp < 0 ? 1 : 0), (byte) ((int) (Math.abs(kp) * 100000) >> 24), (byte) ((int) (Math.abs(kp) * 100000) >> 16 % (0x1000000)),
@@ -938,7 +953,13 @@ public class DriverStation
                 (byte) (ki < 0 ? 1 : 0), (byte) ((int) (Math.abs(ki) * 100000) >> 24), (byte) ((int) (Math.abs(ki) * 100000) >> 16 % (0x1000000)),
                 (byte) ((int) (Math.abs(ki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(ki) * 100000) % (0x100)),
                 (byte) (kd < 0 ? 1 : 0), (byte) ((int) (Math.abs(kd) * 100000) >> 24), (byte) ((int) (Math.abs(kd) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(kd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kd) * 100000) % (0x100))
+                (byte) ((int) (Math.abs(kd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kd) * 100000) % (0x100)),
+                (byte) (yawkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkp) * 100000) >> 24), (byte) ((int) (Math.abs(yawkp) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(yawkp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkp) * 100000) % (0x100)),
+                (byte) (yawki < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawki) * 100000) >> 24), (byte) ((int) (Math.abs(yawki) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(yawki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawki) * 100000) % (0x100)),
+                (byte) (yawkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkd) * 100000) >> 24), (byte) ((int) (Math.abs(yawkd) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(yawkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkd) * 100000) % (0x100))
         };
         send(toSend);
         return text;
@@ -986,13 +1007,18 @@ public class DriverStation
 
     private void printToConsole(String toPrint)
     {
-        Date date = new Date();
-        DateFormat df = new SimpleDateFormat("hh:mm:ss");
-        String timeStamp = df.format(date);
-        ConsoleHistory += ("[" + timeStamp + "]" + " " + toPrint + "\n");
-        Console.setText(ConsoleHistory);
-        JScrollBar vertical = ConsoleScrollPane.getVerticalScrollBar();
-        vertical.setValue(vertical.getMaximum());
+        try
+        {
+            Date date = new Date();
+            DateFormat df = new SimpleDateFormat("hh:mm:ss");
+            String timeStamp = df.format(date);
+            ConsoleHistory += ("[" + timeStamp + "]" + " " + toPrint + "\n");
+            Console.setText(ConsoleHistory);
+            JScrollBar vertical = ConsoleScrollPane.getVerticalScrollBar();
+            vertical.setValue(vertical.getMaximum());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
