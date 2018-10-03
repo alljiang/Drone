@@ -5,15 +5,17 @@
 [1]  zero mpu                           [2][3] (helps verify checksum)
 [2]  joystick values                    [LY, -100 to 100, thrust][RY, -100 to 100, front/back tilt][RX, -100 to 100, side tilt][RTrig, yaw, 0/1][LTrig, yaw, 0/1]
 [3]  set motor speeds (for testing)     [FR, 0 to 100][FL, 0 to 100][BL, 0 to 100][BR, 0 to 100]
-[4]  set PID constants       roll/pitch [sign 0/+ or 1/-][kP*100000>>24][kP*100000%(0x1000000)>>16][kP*100000%(0x10000)>>8][kP*100000%(0x100)] ALL OF THESE SHOULD BE READ UNSIGNED
+[4]  set rate PID constants         r/p [sign 0/+ or 1/-][kP*100000>>24][kP*100000%(0x1000000)>>16][kP*100000%(0x10000)>>8][kP*100000%(0x100)] ALL OF THESE SHOULD BE READ UNSIGNED
                                         [sign 0/+ or 1/-][kI*100000>>24][kI*100000%(0x1000000)>>16][kI*100000%(0x10000)>>8][kI*100000%(0x100)]
                                         [sign 0/+ or 1/-][kD*100000>>24][kD*100000%(0x1000000)>>16][kD*100000%(0x10000)>>8][kD*100000%(0x100)]
-                                    yaw [sign 0/+ or 1/-][kP*100000>>24][kP*100000%(0x1000000)>>16][kP*100000%(0x10000)>>8][kP*100000%(0x100)] ALL OF THESE SHOULD BE READ UNSIGNED
+                                      y [sign 0/+ or 1/-][kP*100000>>24][kP*100000%(0x1000000)>>16][kP*100000%(0x10000)>>8][kP*100000%(0x100)] ALL OF THESE SHOULD BE READ UNSIGNED
                                         [sign 0/+ or 1/-][kI*100000>>24][kI*100000%(0x1000000)>>16][kI*100000%(0x10000)>>8][kI*100000%(0x100)]
                                         [sign 0/+ or 1/-][kD*100000>>24][kD*100000%(0x1000000)>>16][kD*100000%(0x10000)>>8][kD*100000%(0x100)]
 [5]  translational trim                 [0:Up/1:Right/2:Down/3:Left]
 [6]  rotational trim                    [0:CCW/1:CW]
-
+[7]  set leveling PID constants         [sign 0/+ or 1/-][kP*100000>>24][kP*100000%(0x1000000)>>16][kP*100000%(0x10000)>>8][kP*100000%(0x100)] ALL OF THESE SHOULD BE READ UNSIGNED
+                                        [sign 0/+ or 1/-][kI*100000>>24][kI*100000%(0x1000000)>>16][kI*100000%(0x10000)>>8][kI*100000%(0x100)]
+                                        [sign 0/+ or 1/-][kD*100000>>24][kD*100000%(0x1000000)>>16][kD*100000%(0x10000)>>8][kD*100000%(0x100)]
 -----To Command Station-------
 [command][information][checksum]
 [0xA]  current battery voltage        [voltage * 10]
