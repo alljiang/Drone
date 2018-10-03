@@ -117,10 +117,25 @@ public class DriverStation
     private JPanel GraphPanel;
     private JLabel BatteryVoltage;
     private JButton resetButton;
+    private JPanel LevelPIDPanel;
+    private JLabel M1Two;
+    private JLabel M0Two;
+    private JLabel M2Two;
+    private JLabel M3Two;
+    private JLabel CurrentAngleP;
+    private JTextField LevelD;
+    private JLabel CurrentAngleI;
+    private JLabel CurrentAngleD;
+    private JTextField LevelP;
+    private JTextField LevelI;
+    private JButton LevelApplyChanges;
+    private JLabel currentPitchAngle;
+    private JLabel currentRollAngle;
     SerialPort port = null;
     boolean droneEnabled = false;
     boolean continueClock = false;
     long startElapsedTime = 0;
+    double levelkp, levelki, levelkd;
     double yawkp, yawki, yawkd;
     double kp, ki, kd;
     double rollkp, rollki, rollkd;
@@ -185,7 +200,7 @@ public class DriverStation
                 RollI.setText("");
                 RollD.setText("");
 
-                String text = updatePID();
+                String text = updatePID(true);
 
                 CurrentYawP.setText(yawkp + "");
                 CurrentYawI.setText(yawki + "");
@@ -196,6 +211,37 @@ public class DriverStation
                 CurrentRollP.setText(rollkp + "");
                 CurrentRollI.setText(rollki + "");
                 CurrentRollD.setText(rollkd + "");
+                try
+                {
+                    PrintWriter pw = new PrintWriter("PIDStorage.dat");
+                    pw.println(text);
+                    pw.close();
+                } catch (FileNotFoundException e1)
+                {
+                    e1.printStackTrace();
+                }
+            }
+        });
+        LevelApplyChanges.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                String lp = LevelP.getText();
+                String li = LevelI.getText();
+                String ld = LevelD.getText();
+                if (lp.length() > 0) levelkp = Double.parseDouble(lp);
+                if (li.length() > 0) levelki = Double.parseDouble(li);
+                if (ld.length() > 0) levelkd = Double.parseDouble(ld);
+                CurrentAngleP.setText("");
+                CurrentAngleI.setText("");
+                CurrentAngleD.setText("");
+
+                String text = updatePID(false);
+
+                CurrentAngleP.setText(levelkp + "");
+                CurrentAngleI.setText(levelki + "");
+                CurrentAngleD.setText(levelkd + "");
                 try
                 {
                     PrintWriter pw = new PrintWriter("PIDStorage.dat");
@@ -218,6 +264,9 @@ public class DriverStation
             yawkp = Double.parseDouble(st.nextToken());
             yawki = Double.parseDouble(st.nextToken());
             yawkd = Double.parseDouble(st.nextToken());
+            levelkp = Double.parseDouble(st.nextToken());
+            levelki = Double.parseDouble(st.nextToken());
+            levelkd = Double.parseDouble(st.nextToken());
             rollkp = kp;
             rollki = ki;
             rollkd = kd;
@@ -227,9 +276,9 @@ public class DriverStation
             CurrentPitchP.setText(kp + "");
             CurrentPitchI.setText(ki + "");
             CurrentPitchD.setText(kd + "");
-            CurrentRollP.setText(rollkp + "");
-            CurrentRollI.setText(rollki + "");
-            CurrentRollD.setText(rollkd + "");
+            CurrentAngleP.setText(levelkp + "");
+            CurrentAngleI.setText(levelki + "");
+            CurrentAngleD.setText(levelkd + "");
         } catch (Exception e)
         {
             e.printStackTrace();
@@ -282,6 +331,9 @@ public class DriverStation
         applyChangesButton.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
         applyChangesButton.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
         applyChangesButton.getActionMap().put("disable", disable);
+        LevelApplyChanges.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
+        LevelApplyChanges.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
+        LevelApplyChanges.getActionMap().put("disable", disable);
         YawP.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
         YawP.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
         YawP.getActionMap().put("disable", disable);
@@ -291,6 +343,24 @@ public class DriverStation
         YawD.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
         YawD.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
         YawD.getActionMap().put("disable", disable);
+        LevelP.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
+        LevelP.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
+        LevelP.getActionMap().put("disable", disable);
+        LevelI.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
+        LevelI.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
+        LevelI.getActionMap().put("disable", disable);
+        LevelD.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
+        LevelD.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
+        LevelD.getActionMap().put("disable", disable);
+        CurrentAngleP.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
+        CurrentAngleP.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
+        CurrentAngleP.getActionMap().put("disable", disable);
+        CurrentAngleI.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
+        CurrentAngleI.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
+        CurrentAngleI.getActionMap().put("disable", disable);
+        CurrentAngleD.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
+        CurrentAngleD.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
+        CurrentAngleD.getActionMap().put("disable", disable);
         PitchP.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
         PitchP.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
         PitchP.getActionMap().put("disable", disable);
@@ -616,8 +686,22 @@ public class DriverStation
             byte[] cmd = new byte[1];
             port.readBytes(cmd, 1);
             int command = unsign(cmd[0]);
-            if (command < 7 || command > 0xA) return;
-            if (command == 0xA)
+            if (command < 7 || command > 0xB) return;
+            if (command == 0xB)
+            {
+                byte[] readings = new byte[2];
+                port.readBytes(readings, 2);
+                byte[] checkSum = new byte[1];
+                port.readBytes(checkSum, 1);
+                byte calculatedChecksum = (byte) (calculateChecksum(readings) + command);
+                if (calculatedChecksum != checkSum[0])
+                {
+                    flush();
+                    return;
+                }
+                currentPitchAngle.setText(readings[0] + "");
+                currentRollAngle.setText(readings[1] + "");
+            } else if (command == 0xA)
             {
                 byte[] batteryValue = new byte[1];
                 port.readBytes(batteryValue, 1);
@@ -646,7 +730,11 @@ public class DriverStation
                 M1.setText("M1: " + motorValues[1]);
                 M2.setText("M2: " + motorValues[2]);
                 M3.setText("M3: " + motorValues[3]);
-            } else if (command == 8)//CURRENT MPU READINGS
+                M0Two.setText("M0: " + motorValues[0]);
+                M1Two.setText("M1: " + motorValues[1]);
+                M2Two.setText("M2: " + motorValues[2]);
+                M3Two.setText("M3: " + motorValues[3]);
+            } else if (command == 8)//CURRENT MPU RATES
             {
                 byte[] readings = new byte[3];
                 port.readBytes(readings, 3);
@@ -915,7 +1003,7 @@ public class DriverStation
             BtnStatus9.setBackground(new Color(0x4B4B4B));
         }
         if (controller.isButtonPressed(10))
-            {
+        {
             Btn10 = true;
             BtnStatus10.setBackground(new Color(0x64ff00));
         } else
@@ -943,25 +1031,40 @@ public class DriverStation
         }
     }
 
-    private String updatePID()
+    private String updatePID(boolean rate)
     {
-        String text = kp + " " + ki + " " + kd + " " + yawkp + " " + yawki + " " + yawkd;
+        String text = kp + " " + ki + " " + kd + " " + yawkp + " " + yawki + " " + yawkd + " "
+                + levelkp + " " + levelki + " " + levelkd;
         printToConsole("Set PID to: " + text);
-        byte[] toSend = new byte[]{4,
-                (byte) (kp < 0 ? 1 : 0), (byte) ((int) (Math.abs(kp) * 100000) >> 24), (byte) ((int) (Math.abs(kp) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(kp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kp) * 100000) % (0x100)),
-                (byte) (ki < 0 ? 1 : 0), (byte) ((int) (Math.abs(ki) * 100000) >> 24), (byte) ((int) (Math.abs(ki) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(ki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(ki) * 100000) % (0x100)),
-                (byte) (kd < 0 ? 1 : 0), (byte) ((int) (Math.abs(kd) * 100000) >> 24), (byte) ((int) (Math.abs(kd) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(kd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kd) * 100000) % (0x100)),
-                (byte) (yawkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkp) * 100000) >> 24), (byte) ((int) (Math.abs(yawkp) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(yawkp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkp) * 100000) % (0x100)),
-                (byte) (yawki < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawki) * 100000) >> 24), (byte) ((int) (Math.abs(yawki) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(yawki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawki) * 100000) % (0x100)),
-                (byte) (yawkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkd) * 100000) >> 24), (byte) ((int) (Math.abs(yawkd) * 100000) >> 16 % (0x1000000)),
-                (byte) ((int) (Math.abs(yawkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkd) * 100000) % (0x100))
-        };
-        send(toSend);
+        if (rate)
+        {
+            byte[] toSend = new byte[]{4,
+                    (byte) (kp < 0 ? 1 : 0), (byte) ((int) (Math.abs(kp) * 100000) >> 24), (byte) ((int) (Math.abs(kp) * 100000) >> 16 % (0x1000000)),
+                    (byte) ((int) (Math.abs(kp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kp) * 100000) % (0x100)),
+                    (byte) (ki < 0 ? 1 : 0), (byte) ((int) (Math.abs(ki) * 100000) >> 24), (byte) ((int) (Math.abs(ki) * 100000) >> 16 % (0x1000000)),
+                    (byte) ((int) (Math.abs(ki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(ki) * 100000) % (0x100)),
+                    (byte) (kd < 0 ? 1 : 0), (byte) ((int) (Math.abs(kd) * 100000) >> 24), (byte) ((int) (Math.abs(kd) * 100000) >> 16 % (0x1000000)),
+                    (byte) ((int) (Math.abs(kd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kd) * 100000) % (0x100)),
+                    (byte) (yawkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkp) * 100000) >> 24), (byte) ((int) (Math.abs(yawkp) * 100000) >> 16 % (0x1000000)),
+                    (byte) ((int) (Math.abs(yawkp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkp) * 100000) % (0x100)),
+                    (byte) (yawki < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawki) * 100000) >> 24), (byte) ((int) (Math.abs(yawki) * 100000) >> 16 % (0x1000000)),
+                    (byte) ((int) (Math.abs(yawki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawki) * 100000) % (0x100)),
+                    (byte) (yawkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkd) * 100000) >> 24), (byte) ((int) (Math.abs(yawkd) * 100000) >> 16 % (0x1000000)),
+                    (byte) ((int) (Math.abs(yawkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkd) * 100000) % (0x100))
+            };
+            send(toSend);
+        } else
+        {
+            byte[] toSend = new byte[]{7,
+                    (byte) (levelkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(levelkp) * 100000) >> 24), (byte) ((int) (Math.abs(levelkp) * 100000) >> 16 % (0x1000000)),
+                    (byte) ((int) (Math.abs(levelkp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(levelkp) * 100000) % (0x100)),
+                    (byte) (levelki < 0 ? 1 : 0), (byte) ((int) (Math.abs(levelki) * 100000) >> 24), (byte) ((int) (Math.abs(levelki) * 100000) >> 16 % (0x1000000)),
+                    (byte) ((int) (Math.abs(levelki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(levelki) * 100000) % (0x100)),
+                    (byte) (levelkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(levelkd) * 100000) >> 24), (byte) ((int) (Math.abs(levelkd) * 100000) >> 16 % (0x1000000)),
+                    (byte) ((int) (Math.abs(levelkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(levelkd) * 100000) % (0x100))
+            };
+            send(toSend);
+        }
         return text;
     }
 
@@ -1016,7 +1119,8 @@ public class DriverStation
             Console.setText(ConsoleHistory);
             JScrollBar vertical = ConsoleScrollPane.getVerticalScrollBar();
             vertical.setValue(vertical.getMaximum());
-        } catch (Exception e) {
+        } catch (Exception e)
+        {
             e.printStackTrace();
         }
     }
@@ -1043,415 +1147,459 @@ public class DriverStation
         TabPane.setTabPlacement(4);
         panelMain.add(TabPane, new com.intellij.uiDesigner.core.GridConstraints(0, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, new Dimension(200, 200), null, 0, false));
         ControllerPanel = new JPanel();
-        ControllerPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(21, 5, new Insets(0, 0, 0, 0), -1, -1));
+        ControllerPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(20, 6, new Insets(0, 0, 0, 0), -1, -1));
         TabPane.addTab("Controller", ControllerPanel);
         final JLabel label1 = new JLabel();
         Font label1Font = this.$$$getFont$$$(null, Font.BOLD, 26, label1.getFont());
         if (label1Font != null) label1.setFont(label1Font);
         label1.setText("Axes");
-        ControllerPanel.add(label1, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label1, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final com.intellij.uiDesigner.core.Spacer spacer1 = new com.intellij.uiDesigner.core.Spacer();
-        ControllerPanel.add(spacer1, new com.intellij.uiDesigner.core.GridConstraints(0, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        ControllerPanel.add(spacer1, new com.intellij.uiDesigner.core.GridConstraints(0, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         final com.intellij.uiDesigner.core.Spacer spacer2 = new com.intellij.uiDesigner.core.Spacer();
-        ControllerPanel.add(spacer2, new com.intellij.uiDesigner.core.GridConstraints(20, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        ControllerPanel.add(spacer2, new com.intellij.uiDesigner.core.GridConstraints(19, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         final JLabel label2 = new JLabel();
         Font label2Font = this.$$$getFont$$$(null, -1, 18, label2.getFont());
         if (label2Font != null) label2.setFont(label2Font);
         label2.setText("0: X Axis");
-        ControllerPanel.add(label2, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label2, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label3 = new JLabel();
         Font label3Font = this.$$$getFont$$$(null, -1, 18, label3.getFont());
         if (label3Font != null) label3.setFont(label3Font);
         label3.setText("1: Y Axis");
-        ControllerPanel.add(label3, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label3, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label4 = new JLabel();
         Font label4Font = this.$$$getFont$$$(null, -1, 18, label4.getFont());
         if (label4Font != null) label4.setFont(label4Font);
         label4.setText("2: RX Axis");
-        ControllerPanel.add(label4, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label4, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label5 = new JLabel();
         Font label5Font = this.$$$getFont$$$(null, -1, 18, label5.getFont());
         if (label5Font != null) label5.setFont(label5Font);
         label5.setText("3: RY Axis");
-        ControllerPanel.add(label5, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label5, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         XAxis = new JProgressBar();
         XAxis.setMaximum(10000);
         XAxis.setMinimum(-10000);
-        ControllerPanel.add(XAxis, new com.intellij.uiDesigner.core.GridConstraints(1, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(XAxis, new com.intellij.uiDesigner.core.GridConstraints(1, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         YAxis.setMaximum(10000);
         YAxis.setMinimum(-10000);
-        ControllerPanel.add(YAxis, new com.intellij.uiDesigner.core.GridConstraints(2, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(YAxis, new com.intellij.uiDesigner.core.GridConstraints(2, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         RXAxis.setMaximum(10000);
         RXAxis.setMinimum(-10000);
-        ControllerPanel.add(RXAxis, new com.intellij.uiDesigner.core.GridConstraints(3, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(RXAxis, new com.intellij.uiDesigner.core.GridConstraints(3, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         RYAxis.setMaximum(10000);
         RYAxis.setMinimum(-10000);
-        ControllerPanel.add(RYAxis, new com.intellij.uiDesigner.core.GridConstraints(4, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(RYAxis, new com.intellij.uiDesigner.core.GridConstraints(4, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label6 = new JLabel();
         Font label6Font = this.$$$getFont$$$(null, Font.BOLD, 26, label6.getFont());
         if (label6Font != null) label6.setFont(label6Font);
         label6.setText("Buttons");
-        ControllerPanel.add(label6, new com.intellij.uiDesigner.core.GridConstraints(7, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label6, new com.intellij.uiDesigner.core.GridConstraints(7, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label7 = new JLabel();
         label7.setText(" ");
-        ControllerPanel.add(label7, new com.intellij.uiDesigner.core.GridConstraints(6, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label7, new com.intellij.uiDesigner.core.GridConstraints(6, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label8 = new JLabel();
         label8.setText(" ");
-        ControllerPanel.add(label8, new com.intellij.uiDesigner.core.GridConstraints(5, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label8, new com.intellij.uiDesigner.core.GridConstraints(5, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label9 = new JLabel();
         Font label9Font = this.$$$getFont$$$(null, -1, 18, label9.getFont());
         if (label9Font != null) label9.setFont(label9Font);
         label9.setText("0: ");
-        ControllerPanel.add(label9, new com.intellij.uiDesigner.core.GridConstraints(8, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label9, new com.intellij.uiDesigner.core.GridConstraints(8, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label10 = new JLabel();
         Font label10Font = this.$$$getFont$$$(null, -1, 18, label10.getFont());
         if (label10Font != null) label10.setFont(label10Font);
         label10.setText("1: ");
-        ControllerPanel.add(label10, new com.intellij.uiDesigner.core.GridConstraints(9, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label10, new com.intellij.uiDesigner.core.GridConstraints(9, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label11 = new JLabel();
         Font label11Font = this.$$$getFont$$$(null, -1, 18, label11.getFont());
         if (label11Font != null) label11.setFont(label11Font);
         label11.setText("2: ");
-        ControllerPanel.add(label11, new com.intellij.uiDesigner.core.GridConstraints(10, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label11, new com.intellij.uiDesigner.core.GridConstraints(10, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label12 = new JLabel();
         Font label12Font = this.$$$getFont$$$(null, -1, 18, label12.getFont());
         if (label12Font != null) label12.setFont(label12Font);
         label12.setText("3: ");
-        ControllerPanel.add(label12, new com.intellij.uiDesigner.core.GridConstraints(11, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label12, new com.intellij.uiDesigner.core.GridConstraints(11, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label13 = new JLabel();
         Font label13Font = this.$$$getFont$$$(null, -1, 18, label13.getFont());
         if (label13Font != null) label13.setFont(label13Font);
         label13.setText("4: ");
-        ControllerPanel.add(label13, new com.intellij.uiDesigner.core.GridConstraints(12, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label13, new com.intellij.uiDesigner.core.GridConstraints(12, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label14 = new JLabel();
         Font label14Font = this.$$$getFont$$$(null, -1, 18, label14.getFont());
         if (label14Font != null) label14.setFont(label14Font);
         label14.setText("5:");
-        ControllerPanel.add(label14, new com.intellij.uiDesigner.core.GridConstraints(13, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label14, new com.intellij.uiDesigner.core.GridConstraints(13, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label15 = new JLabel();
         Font label15Font = this.$$$getFont$$$(null, -1, 18, label15.getFont());
         if (label15Font != null) label15.setFont(label15Font);
         label15.setText("6:");
-        ControllerPanel.add(label15, new com.intellij.uiDesigner.core.GridConstraints(14, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label15, new com.intellij.uiDesigner.core.GridConstraints(14, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         BtnStatus1.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus1, new com.intellij.uiDesigner.core.GridConstraints(9, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus1, new com.intellij.uiDesigner.core.GridConstraints(9, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BtnStatus2.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus2, new com.intellij.uiDesigner.core.GridConstraints(10, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus2, new com.intellij.uiDesigner.core.GridConstraints(10, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BtnStatus0.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus0, new com.intellij.uiDesigner.core.GridConstraints(8, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus0, new com.intellij.uiDesigner.core.GridConstraints(8, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BtnStatus3.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus3, new com.intellij.uiDesigner.core.GridConstraints(11, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus3, new com.intellij.uiDesigner.core.GridConstraints(11, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BtnStatus4.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus4, new com.intellij.uiDesigner.core.GridConstraints(12, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus4, new com.intellij.uiDesigner.core.GridConstraints(12, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BtnStatus5.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus5, new com.intellij.uiDesigner.core.GridConstraints(13, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus5, new com.intellij.uiDesigner.core.GridConstraints(13, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BtnStatus6.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus6, new com.intellij.uiDesigner.core.GridConstraints(14, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus6, new com.intellij.uiDesigner.core.GridConstraints(14, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         final JLabel label16 = new JLabel();
         Font label16Font = this.$$$getFont$$$(null, -1, 18, label16.getFont());
         if (label16Font != null) label16.setFont(label16Font);
         label16.setText("8:");
-        ControllerPanel.add(label16, new com.intellij.uiDesigner.core.GridConstraints(9, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label16, new com.intellij.uiDesigner.core.GridConstraints(9, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label17 = new JLabel();
         Font label17Font = this.$$$getFont$$$(null, -1, 18, label17.getFont());
         if (label17Font != null) label17.setFont(label17Font);
         label17.setText("7:");
-        ControllerPanel.add(label17, new com.intellij.uiDesigner.core.GridConstraints(8, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label17, new com.intellij.uiDesigner.core.GridConstraints(8, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label18 = new JLabel();
         Font label18Font = this.$$$getFont$$$(null, -1, 18, label18.getFont());
         if (label18Font != null) label18.setFont(label18Font);
         label18.setText("9:");
-        ControllerPanel.add(label18, new com.intellij.uiDesigner.core.GridConstraints(10, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label18, new com.intellij.uiDesigner.core.GridConstraints(10, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label19 = new JLabel();
         Font label19Font = this.$$$getFont$$$(null, -1, 18, label19.getFont());
         if (label19Font != null) label19.setFont(label19Font);
         label19.setText("10: ");
-        ControllerPanel.add(label19, new com.intellij.uiDesigner.core.GridConstraints(11, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label19, new com.intellij.uiDesigner.core.GridConstraints(11, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label20 = new JLabel();
         Font label20Font = this.$$$getFont$$$(null, -1, 18, label20.getFont());
         if (label20Font != null) label20.setFont(label20Font);
         label20.setText("11: ");
-        ControllerPanel.add(label20, new com.intellij.uiDesigner.core.GridConstraints(12, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label20, new com.intellij.uiDesigner.core.GridConstraints(12, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label21 = new JLabel();
         Font label21Font = this.$$$getFont$$$(null, -1, 18, label21.getFont());
         if (label21Font != null) label21.setFont(label21Font);
         label21.setText("12: ");
-        ControllerPanel.add(label21, new com.intellij.uiDesigner.core.GridConstraints(13, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label21, new com.intellij.uiDesigner.core.GridConstraints(13, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label22 = new JLabel();
         label22.setText(" ");
-        ControllerPanel.add(label22, new com.intellij.uiDesigner.core.GridConstraints(15, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(label22, new com.intellij.uiDesigner.core.GridConstraints(15, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label23 = new JLabel();
         label23.setText(" ");
         ControllerPanel.add(label23, new com.intellij.uiDesigner.core.GridConstraints(16, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label24 = new JLabel();
-        Font label24Font = this.$$$getFont$$$(null, Font.BOLD, 26, label24.getFont());
+        Font label24Font = this.$$$getFont$$$(null, -1, 18, label24.getFont());
         if (label24Font != null) label24.setFont(label24Font);
-        label24.setText("POV");
-        ControllerPanel.add(label24, new com.intellij.uiDesigner.core.GridConstraints(17, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label24.setText("X Axis ");
+        ControllerPanel.add(label24, new com.intellij.uiDesigner.core.GridConstraints(17, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label25 = new JLabel();
         Font label25Font = this.$$$getFont$$$(null, -1, 18, label25.getFont());
         if (label25Font != null) label25.setFont(label25Font);
-        label25.setText("X Axis ");
-        ControllerPanel.add(label25, new com.intellij.uiDesigner.core.GridConstraints(18, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label26 = new JLabel();
-        Font label26Font = this.$$$getFont$$$(null, -1, 18, label26.getFont());
-        if (label26Font != null) label26.setFont(label26Font);
-        label26.setText("Y Axis");
-        ControllerPanel.add(label26, new com.intellij.uiDesigner.core.GridConstraints(19, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label25.setText("Y Axis");
+        ControllerPanel.add(label25, new com.intellij.uiDesigner.core.GridConstraints(18, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         POVXAxis.setMaximum(1);
         POVXAxis.setMinimum(-1);
-        ControllerPanel.add(POVXAxis, new com.intellij.uiDesigner.core.GridConstraints(18, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(POVXAxis, new com.intellij.uiDesigner.core.GridConstraints(17, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         POVYAxis.setMaximum(1);
         POVYAxis.setMinimum(-1);
-        ControllerPanel.add(POVYAxis, new com.intellij.uiDesigner.core.GridConstraints(19, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ControllerPanel.add(POVYAxis, new com.intellij.uiDesigner.core.GridConstraints(18, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final com.intellij.uiDesigner.core.Spacer spacer3 = new com.intellij.uiDesigner.core.Spacer();
-        ControllerPanel.add(spacer3, new com.intellij.uiDesigner.core.GridConstraints(15, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        ControllerPanel.add(spacer3, new com.intellij.uiDesigner.core.GridConstraints(15, 5, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         BtnStatus7.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus7, new com.intellij.uiDesigner.core.GridConstraints(8, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus7, new com.intellij.uiDesigner.core.GridConstraints(8, 5, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BtnStatus8.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus8, new com.intellij.uiDesigner.core.GridConstraints(9, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus8, new com.intellij.uiDesigner.core.GridConstraints(9, 5, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BtnStatus9.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus9, new com.intellij.uiDesigner.core.GridConstraints(10, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus9, new com.intellij.uiDesigner.core.GridConstraints(10, 5, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BtnStatus10.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus10, new com.intellij.uiDesigner.core.GridConstraints(11, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus10, new com.intellij.uiDesigner.core.GridConstraints(11, 5, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BtnStatus11.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus11, new com.intellij.uiDesigner.core.GridConstraints(12, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus11, new com.intellij.uiDesigner.core.GridConstraints(12, 5, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BtnStatus12.setBackground(new Color(-11842741));
-        ControllerPanel.add(BtnStatus12, new com.intellij.uiDesigner.core.GridConstraints(13, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        ControllerPanel.add(BtnStatus12, new com.intellij.uiDesigner.core.GridConstraints(13, 5, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        final JLabel label26 = new JLabel();
+        Font label26Font = this.$$$getFont$$$(null, Font.BOLD, 26, label26.getFont());
+        if (label26Font != null) label26.setFont(label26Font);
+        label26.setText("POV");
+        ControllerPanel.add(label26, new com.intellij.uiDesigner.core.GridConstraints(16, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         PIDPanel = new JPanel();
-        PIDPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(45, 9, new Insets(0, 0, 0, 0), -1, -1));
+        PIDPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(34, 7, new Insets(0, 0, 0, 0), -1, -1));
         Font PIDPanelFont = this.$$$getFont$$$(null, -1, -1, PIDPanel.getFont());
         if (PIDPanelFont != null) PIDPanel.setFont(PIDPanelFont);
-        TabPane.addTab("PID Tuning", PIDPanel);
+        TabPane.addTab("Rate PID", PIDPanel);
+        final com.intellij.uiDesigner.core.Spacer spacer4 = new com.intellij.uiDesigner.core.Spacer();
+        PIDPanel.add(spacer4, new com.intellij.uiDesigner.core.GridConstraints(5, 2, 3, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         final JLabel label27 = new JLabel();
-        Font label27Font = this.$$$getFont$$$(null, Font.BOLD, 36, label27.getFont());
+        Font label27Font = this.$$$getFont$$$(null, -1, 36, label27.getFont());
         if (label27Font != null) label27.setFont(label27Font);
-        label27.setText("Yaw");
-        PIDPanel.add(label27, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 19, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label27.setText("P");
+        PIDPanel.add(label27, new com.intellij.uiDesigner.core.GridConstraints(0, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label28 = new JLabel();
         Font label28Font = this.$$$getFont$$$(null, -1, 36, label28.getFont());
         if (label28Font != null) label28.setFont(label28Font);
-        label28.setText("P: ");
-        PIDPanel.add(label28, new com.intellij.uiDesigner.core.GridConstraints(0, 1, 21, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label28.setText("I");
+        PIDPanel.add(label28, new com.intellij.uiDesigner.core.GridConstraints(0, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label29 = new JLabel();
         Font label29Font = this.$$$getFont$$$(null, -1, 36, label29.getFont());
         if (label29Font != null) label29.setFont(label29Font);
-        label29.setText("I: ");
-        PIDPanel.add(label29, new com.intellij.uiDesigner.core.GridConstraints(0, 3, 21, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label29.setText("D");
+        PIDPanel.add(label29, new com.intellij.uiDesigner.core.GridConstraints(0, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label30 = new JLabel();
-        Font label30Font = this.$$$getFont$$$(null, -1, 36, label30.getFont());
+        Font label30Font = this.$$$getFont$$$(null, Font.BOLD, 36, label30.getFont());
         if (label30Font != null) label30.setFont(label30Font);
-        label30.setText("D: ");
-        PIDPanel.add(label30, new com.intellij.uiDesigner.core.GridConstraints(0, 5, 21, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label31 = new JLabel();
-        Font label31Font = this.$$$getFont$$$(null, Font.BOLD, 36, label31.getFont());
-        if (label31Font != null) label31.setFont(label31Font);
-        label31.setText("Pitch");
-        PIDPanel.add(label31, new com.intellij.uiDesigner.core.GridConstraints(21, 0, 8, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label32 = new JLabel();
-        Font label32Font = this.$$$getFont$$$(null, Font.BOLD, 36, label32.getFont());
-        if (label32Font != null) label32.setFont(label32Font);
-        label32.setText("Roll");
-        PIDPanel.add(label32, new com.intellij.uiDesigner.core.GridConstraints(31, 0, 10, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label33 = new JLabel();
-        Font label33Font = this.$$$getFont$$$(null, -1, 36, label33.getFont());
-        if (label33Font != null) label33.setFont(label33Font);
-        label33.setText("P: ");
-        PIDPanel.add(label33, new com.intellij.uiDesigner.core.GridConstraints(21, 1, 9, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label34 = new JLabel();
-        Font label34Font = this.$$$getFont$$$(null, -1, 36, label34.getFont());
-        if (label34Font != null) label34.setFont(label34Font);
-        label34.setText("P: ");
-        PIDPanel.add(label34, new com.intellij.uiDesigner.core.GridConstraints(31, 1, 13, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label35 = new JLabel();
-        Font label35Font = this.$$$getFont$$$(null, -1, 36, label35.getFont());
-        if (label35Font != null) label35.setFont(label35Font);
-        label35.setText("I: ");
-        PIDPanel.add(label35, new com.intellij.uiDesigner.core.GridConstraints(21, 3, 9, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label36 = new JLabel();
-        Font label36Font = this.$$$getFont$$$(null, -1, 36, label36.getFont());
-        if (label36Font != null) label36.setFont(label36Font);
-        label36.setText("I: ");
-        PIDPanel.add(label36, new com.intellij.uiDesigner.core.GridConstraints(31, 3, 13, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label37 = new JLabel();
-        Font label37Font = this.$$$getFont$$$(null, -1, 36, label37.getFont());
-        if (label37Font != null) label37.setFont(label37Font);
-        label37.setText("D: ");
-        PIDPanel.add(label37, new com.intellij.uiDesigner.core.GridConstraints(21, 5, 9, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label38 = new JLabel();
-        Font label38Font = this.$$$getFont$$$(null, -1, 36, label38.getFont());
-        if (label38Font != null) label38.setFont(label38Font);
-        label38.setText("D: ");
-        PIDPanel.add(label38, new com.intellij.uiDesigner.core.GridConstraints(31, 5, 13, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        applyChangesButton = new JButton();
-        Font applyChangesButtonFont = this.$$$getFont$$$(null, -1, 36, applyChangesButton.getFont());
-        if (applyChangesButtonFont != null) applyChangesButton.setFont(applyChangesButtonFont);
-        applyChangesButton.setText("Apply \nChanges");
-        PIDPanel.add(applyChangesButton, new com.intellij.uiDesigner.core.GridConstraints(21, 7, 9, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, new Dimension(-1, 100), 0, false));
-        PitchP = new JTextField();
-        PIDPanel.add(PitchP, new com.intellij.uiDesigner.core.GridConstraints(28, 2, 2, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        PitchI = new JTextField();
-        PIDPanel.add(PitchI, new com.intellij.uiDesigner.core.GridConstraints(27, 4, 3, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        PitchD = new JTextField();
-        PIDPanel.add(PitchD, new com.intellij.uiDesigner.core.GridConstraints(26, 6, 4, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        RollP = new JTextField();
-        RollP.setText("");
-        RollP.setVisible(true);
-        PIDPanel.add(RollP, new com.intellij.uiDesigner.core.GridConstraints(38, 2, 6, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        RollI = new JTextField();
-        RollI.setText("");
-        PIDPanel.add(RollI, new com.intellij.uiDesigner.core.GridConstraints(37, 4, 7, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        RollD = new JTextField();
-        RollD.setText("");
-        PIDPanel.add(RollD, new com.intellij.uiDesigner.core.GridConstraints(35, 6, 9, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        YPR_Picture = new JLabel();
-        YPR_Picture.setIcon(new ImageIcon(getClass().getResource("/ypr.png")));
-        YPR_Picture.setText("");
-        YPR_Picture.setVisible(true);
-        PIDPanel.add(YPR_Picture, new com.intellij.uiDesigner.core.GridConstraints(0, 7, 21, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label39 = new JLabel();
-        Font label39Font = this.$$$getFont$$$(null, Font.BOLD, 20, label39.getFont());
-        if (label39Font != null) label39.setFont(label39Font);
-        label39.setText("Current Motor Values");
-        PIDPanel.add(label39, new com.intellij.uiDesigner.core.GridConstraints(31, 7, 8, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        M1 = new JLabel();
-        Font M1Font = this.$$$getFont$$$(null, -1, 20, M1.getFont());
-        if (M1Font != null) M1.setFont(M1Font);
-        M1.setText("M1: 0.00");
-        PIDPanel.add(M1, new com.intellij.uiDesigner.core.GridConstraints(39, 7, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        M0 = new JLabel();
-        Font M0Font = this.$$$getFont$$$(null, -1, 20, M0.getFont());
-        if (M0Font != null) M0.setFont(M0Font);
-        M0.setText("M0: 0.00");
-        PIDPanel.add(M0, new com.intellij.uiDesigner.core.GridConstraints(39, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        M2 = new JLabel();
-        Font M2Font = this.$$$getFont$$$(null, -1, 20, M2.getFont());
-        if (M2Font != null) M2.setFont(M2Font);
-        M2.setText("M2: 0.00");
-        PIDPanel.add(M2, new com.intellij.uiDesigner.core.GridConstraints(40, 7, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        M3 = new JLabel();
-        Font M3Font = this.$$$getFont$$$(null, -1, 20, M3.getFont());
-        if (M3Font != null) M3.setFont(M3Font);
-        M3.setText("M3: 0.00");
-        PIDPanel.add(M3, new com.intellij.uiDesigner.core.GridConstraints(40, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        Font CurrentYawDFont = this.$$$getFont$$$(null, -1, 26, CurrentYawD.getFont());
-        if (CurrentYawDFont != null) CurrentYawD.setFont(CurrentYawDFont);
-        CurrentYawD.setText("0.0");
-        PIDPanel.add(CurrentYawD, new com.intellij.uiDesigner.core.GridConstraints(2, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        CurrentYawI = new JLabel();
-        Font CurrentYawIFont = this.$$$getFont$$$(null, -1, 26, CurrentYawI.getFont());
-        if (CurrentYawIFont != null) CurrentYawI.setFont(CurrentYawIFont);
-        CurrentYawI.setText("0.0");
-        PIDPanel.add(CurrentYawI, new com.intellij.uiDesigner.core.GridConstraints(2, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        Font CurrentPitchPFont = this.$$$getFont$$$(null, -1, 26, CurrentPitchP.getFont());
-        if (CurrentPitchPFont != null) CurrentPitchP.setFont(CurrentPitchPFont);
-        CurrentPitchP.setText("0.0");
-        PIDPanel.add(CurrentPitchP, new com.intellij.uiDesigner.core.GridConstraints(21, 2, 7, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        Font CurrentPitchIFont = this.$$$getFont$$$(null, -1, 26, CurrentPitchI.getFont());
-        if (CurrentPitchIFont != null) CurrentPitchI.setFont(CurrentPitchIFont);
-        CurrentPitchI.setText("0.0");
-        PIDPanel.add(CurrentPitchI, new com.intellij.uiDesigner.core.GridConstraints(24, 4, 3, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        Font CurrentPitchDFont = this.$$$getFont$$$(null, -1, 26, CurrentPitchD.getFont());
-        if (CurrentPitchDFont != null) CurrentPitchD.setFont(CurrentPitchDFont);
-        CurrentPitchD.setText("0.0");
-        PIDPanel.add(CurrentPitchD, new com.intellij.uiDesigner.core.GridConstraints(25, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        Font CurrentRollPFont = this.$$$getFont$$$(null, -1, 26, CurrentRollP.getFont());
-        if (CurrentRollPFont != null) CurrentRollP.setFont(CurrentRollPFont);
-        CurrentRollP.setText("0.0");
-        PIDPanel.add(CurrentRollP, new com.intellij.uiDesigner.core.GridConstraints(31, 2, 7, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        Font CurrentRollDFont = this.$$$getFont$$$(null, -1, 26, CurrentRollD.getFont());
-        if (CurrentRollDFont != null) CurrentRollD.setFont(CurrentRollDFont);
-        CurrentRollD.setText("0.0");
-        PIDPanel.add(CurrentRollD, new com.intellij.uiDesigner.core.GridConstraints(34, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        Font CurrentRollIFont = this.$$$getFont$$$(null, -1, 26, CurrentRollI.getFont());
-        if (CurrentRollIFont != null) CurrentRollI.setFont(CurrentRollIFont);
-        CurrentRollI.setText("0.0");
-        PIDPanel.add(CurrentRollI, new com.intellij.uiDesigner.core.GridConstraints(34, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        Font CurrentYawPFont = this.$$$getFont$$$(null, -1, 26, CurrentYawP.getFont());
-        if (CurrentYawPFont != null) CurrentYawP.setFont(CurrentYawPFont);
-        CurrentYawP.setText("0.0");
-        PIDPanel.add(CurrentYawP, new com.intellij.uiDesigner.core.GridConstraints(2, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label30.setText("Yaw");
+        PIDPanel.add(label30, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         currentYaw = new JLabel();
         Font currentYawFont = this.$$$getFont$$$(null, -1, 24, currentYaw.getFont());
         if (currentYawFont != null) currentYaw.setFont(currentYawFont);
         currentYaw.setText("0");
-        PIDPanel.add(currentYaw, new com.intellij.uiDesigner.core.GridConstraints(20, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        PIDPanel.add(currentYaw, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        Font CurrentYawPFont = this.$$$getFont$$$(null, -1, 26, CurrentYawP.getFont());
+        if (CurrentYawPFont != null) CurrentYawP.setFont(CurrentYawPFont);
+        CurrentYawP.setText("0.0");
+        PIDPanel.add(CurrentYawP, new com.intellij.uiDesigner.core.GridConstraints(1, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        CurrentYawI = new JLabel();
+        Font CurrentYawIFont = this.$$$getFont$$$(null, -1, 26, CurrentYawI.getFont());
+        if (CurrentYawIFont != null) CurrentYawI.setFont(CurrentYawIFont);
+        CurrentYawI.setText("0.0");
+        PIDPanel.add(CurrentYawI, new com.intellij.uiDesigner.core.GridConstraints(1, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        Font CurrentYawDFont = this.$$$getFont$$$(null, -1, 26, CurrentYawD.getFont());
+        if (CurrentYawDFont != null) CurrentYawD.setFont(CurrentYawDFont);
+        CurrentYawD.setText("0.0");
+        PIDPanel.add(CurrentYawD, new com.intellij.uiDesigner.core.GridConstraints(1, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        YawP = new JTextField();
+        PIDPanel.add(YawP, new com.intellij.uiDesigner.core.GridConstraints(2, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        YawI = new JTextField();
+        PIDPanel.add(YawI, new com.intellij.uiDesigner.core.GridConstraints(2, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        YawD = new JTextField();
+        PIDPanel.add(YawD, new com.intellij.uiDesigner.core.GridConstraints(2, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        final JLabel label31 = new JLabel();
+        Font label31Font = this.$$$getFont$$$(null, Font.BOLD, 36, label31.getFont());
+        if (label31Font != null) label31.setFont(label31Font);
+        label31.setText("Pitch");
+        PIDPanel.add(label31, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label32 = new JLabel();
+        Font label32Font = this.$$$getFont$$$(null, Font.BOLD, 36, label32.getFont());
+        if (label32Font != null) label32.setFont(label32Font);
+        label32.setText("Roll");
+        PIDPanel.add(label32, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         currentPitch = new JLabel();
         Font currentPitchFont = this.$$$getFont$$$(null, -1, 24, currentPitch.getFont());
         if (currentPitchFont != null) currentPitch.setFont(currentPitchFont);
         currentPitch.setText("0");
-        PIDPanel.add(currentPitch, new com.intellij.uiDesigner.core.GridConstraints(30, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        PIDPanel.add(currentPitch, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         currentRoll = new JLabel();
         Font currentRollFont = this.$$$getFont$$$(null, -1, 24, currentRoll.getFont());
         if (currentRollFont != null) currentRoll.setFont(currentRollFont);
         currentRoll.setText("0");
-        PIDPanel.add(currentRoll, new com.intellij.uiDesigner.core.GridConstraints(41, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        YawP = new JTextField();
-        PIDPanel.add(YawP, new com.intellij.uiDesigner.core.GridConstraints(3, 2, 16, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        YawI = new JTextField();
-        PIDPanel.add(YawI, new com.intellij.uiDesigner.core.GridConstraints(5, 4, 13, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        YawD = new JTextField();
-        PIDPanel.add(YawD, new com.intellij.uiDesigner.core.GridConstraints(6, 6, 9, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        GraphPanel = new JPanel();
-        GraphPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        PIDPanel.add(GraphPanel, new com.intellij.uiDesigner.core.GridConstraints(44, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        PIDPanel.add(currentRoll, new com.intellij.uiDesigner.core.GridConstraints(4, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        Font CurrentPitchPFont = this.$$$getFont$$$(null, -1, 26, CurrentPitchP.getFont());
+        if (CurrentPitchPFont != null) CurrentPitchP.setFont(CurrentPitchPFont);
+        CurrentPitchP.setText("0.0");
+        PIDPanel.add(CurrentPitchP, new com.intellij.uiDesigner.core.GridConstraints(3, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        Font CurrentPitchIFont = this.$$$getFont$$$(null, -1, 26, CurrentPitchI.getFont());
+        if (CurrentPitchIFont != null) CurrentPitchI.setFont(CurrentPitchIFont);
+        CurrentPitchI.setText("0.0");
+        PIDPanel.add(CurrentPitchI, new com.intellij.uiDesigner.core.GridConstraints(3, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        Font CurrentPitchDFont = this.$$$getFont$$$(null, -1, 26, CurrentPitchD.getFont());
+        if (CurrentPitchDFont != null) CurrentPitchD.setFont(CurrentPitchDFont);
+        CurrentPitchD.setText("0.0");
+        PIDPanel.add(CurrentPitchD, new com.intellij.uiDesigner.core.GridConstraints(3, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        PitchP = new JTextField();
+        PIDPanel.add(PitchP, new com.intellij.uiDesigner.core.GridConstraints(4, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        PitchI = new JTextField();
+        PIDPanel.add(PitchI, new com.intellij.uiDesigner.core.GridConstraints(4, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        PitchD = new JTextField();
+        PIDPanel.add(PitchD, new com.intellij.uiDesigner.core.GridConstraints(4, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer5 = new com.intellij.uiDesigner.core.Spacer();
+        PIDPanel.add(spacer5, new com.intellij.uiDesigner.core.GridConstraints(6, 5, 2, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer6 = new com.intellij.uiDesigner.core.Spacer();
+        PIDPanel.add(spacer6, new com.intellij.uiDesigner.core.GridConstraints(7, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        applyChangesButton = new JButton();
+        Font applyChangesButtonFont = this.$$$getFont$$$(null, -1, 36, applyChangesButton.getFont());
+        if (applyChangesButtonFont != null) applyChangesButton.setFont(applyChangesButtonFont);
+        applyChangesButton.setText("Apply \nChanges");
+        PIDPanel.add(applyChangesButton, new com.intellij.uiDesigner.core.GridConstraints(0, 5, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, new Dimension(-1, 100), 0, false));
+        final JLabel label33 = new JLabel();
+        Font label33Font = this.$$$getFont$$$(null, Font.BOLD, 20, label33.getFont());
+        if (label33Font != null) label33.setFont(label33Font);
+        label33.setText("Current Motor Values");
+        PIDPanel.add(label33, new com.intellij.uiDesigner.core.GridConstraints(1, 5, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        M1 = new JLabel();
+        Font M1Font = this.$$$getFont$$$(null, -1, 20, M1.getFont());
+        if (M1Font != null) M1.setFont(M1Font);
+        M1.setText("M1: 0.00");
+        PIDPanel.add(M1, new com.intellij.uiDesigner.core.GridConstraints(2, 5, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(133, 27), null, 0, false));
+        M0 = new JLabel();
+        Font M0Font = this.$$$getFont$$$(null, -1, 20, M0.getFont());
+        if (M0Font != null) M0.setFont(M0Font);
+        M0.setText("M0: 0.00");
+        PIDPanel.add(M0, new com.intellij.uiDesigner.core.GridConstraints(2, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        M2 = new JLabel();
+        Font M2Font = this.$$$getFont$$$(null, -1, 20, M2.getFont());
+        if (M2Font != null) M2.setFont(M2Font);
+        M2.setText("M2: 0.00");
+        PIDPanel.add(M2, new com.intellij.uiDesigner.core.GridConstraints(3, 5, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(133, 27), null, 0, false));
+        M3 = new JLabel();
+        Font M3Font = this.$$$getFont$$$(null, -1, 20, M3.getFont());
+        if (M3Font != null) M3.setFont(M3Font);
+        M3.setText("M3: 0.00");
+        PIDPanel.add(M3, new com.intellij.uiDesigner.core.GridConstraints(3, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        YPR_Picture = new JLabel();
+        YPR_Picture.setIcon(new ImageIcon(getClass().getResource("/ypr.png")));
+        YPR_Picture.setText("");
+        YPR_Picture.setVisible(true);
+        PIDPanel.add(YPR_Picture, new com.intellij.uiDesigner.core.GridConstraints(5, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        LevelPIDPanel = new JPanel();
+        LevelPIDPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(173, 10, new Insets(0, 0, 0, 0), -1, -1));
+        Font LevelPIDPanelFont = this.$$$getFont$$$(null, -1, -1, LevelPIDPanel.getFont());
+        if (LevelPIDPanelFont != null) LevelPIDPanel.setFont(LevelPIDPanelFont);
+        TabPane.addTab("Level PID", LevelPIDPanel);
+        LevelApplyChanges = new JButton();
+        Font LevelApplyChangesFont = this.$$$getFont$$$(null, -1, 36, LevelApplyChanges.getFont());
+        if (LevelApplyChangesFont != null) LevelApplyChanges.setFont(LevelApplyChangesFont);
+        LevelApplyChanges.setText("Apply \nChanges");
+        LevelPIDPanel.add(LevelApplyChanges, new com.intellij.uiDesigner.core.GridConstraints(2, 5, 3, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, new Dimension(-1, 100), 0, false));
+        final JLabel label34 = new JLabel();
+        Font label34Font = this.$$$getFont$$$(null, Font.BOLD, 20, label34.getFont());
+        if (label34Font != null) label34.setFont(label34Font);
+        label34.setText("Current Motor Values");
+        LevelPIDPanel.add(label34, new com.intellij.uiDesigner.core.GridConstraints(5, 5, 1, 5, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        M1Two = new JLabel();
+        Font M1TwoFont = this.$$$getFont$$$(null, -1, 20, M1Two.getFont());
+        if (M1TwoFont != null) M1Two.setFont(M1TwoFont);
+        M1Two.setText("M1: 0.00");
+        LevelPIDPanel.add(M1Two, new com.intellij.uiDesigner.core.GridConstraints(6, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        M0Two = new JLabel();
+        Font M0TwoFont = this.$$$getFont$$$(null, -1, 20, M0Two.getFont());
+        if (M0TwoFont != null) M0Two.setFont(M0TwoFont);
+        M0Two.setText("M0: 0.00");
+        LevelPIDPanel.add(M0Two, new com.intellij.uiDesigner.core.GridConstraints(6, 7, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label35 = new JLabel();
+        Font label35Font = this.$$$getFont$$$(null, -1, 36, label35.getFont());
+        if (label35Font != null) label35.setFont(label35Font);
+        label35.setText("P");
+        LevelPIDPanel.add(label35, new com.intellij.uiDesigner.core.GridConstraints(1, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label36 = new JLabel();
+        Font label36Font = this.$$$getFont$$$(null, -1, 36, label36.getFont());
+        if (label36Font != null) label36.setFont(label36Font);
+        label36.setText("I");
+        LevelPIDPanel.add(label36, new com.intellij.uiDesigner.core.GridConstraints(1, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label37 = new JLabel();
+        Font label37Font = this.$$$getFont$$$(null, -1, 36, label37.getFont());
+        if (label37Font != null) label37.setFont(label37Font);
+        label37.setText("D");
+        LevelPIDPanel.add(label37, new com.intellij.uiDesigner.core.GridConstraints(1, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label38 = new JLabel();
+        Font label38Font = this.$$$getFont$$$(null, -1, 24, label38.getFont());
+        if (label38Font != null) label38.setFont(label38Font);
+        label38.setText("0");
+        LevelPIDPanel.add(label38, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        CurrentAngleD = new JLabel();
+        Font CurrentAngleDFont = this.$$$getFont$$$(null, -1, 26, CurrentAngleD.getFont());
+        if (CurrentAngleDFont != null) CurrentAngleD.setFont(CurrentAngleDFont);
+        CurrentAngleD.setText("0.0");
+        LevelPIDPanel.add(CurrentAngleD, new com.intellij.uiDesigner.core.GridConstraints(3, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        M3Two = new JLabel();
+        Font M3TwoFont = this.$$$getFont$$$(null, -1, 20, M3Two.getFont());
+        if (M3TwoFont != null) M3Two.setFont(M3TwoFont);
+        M3Two.setText("M3: 0.00");
+        LevelPIDPanel.add(M3Two, new com.intellij.uiDesigner.core.GridConstraints(7, 7, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        M2Two = new JLabel();
+        Font M2TwoFont = this.$$$getFont$$$(null, -1, 20, M2Two.getFont());
+        if (M2TwoFont != null) M2Two.setFont(M2TwoFont);
+        M2Two.setText("M2: 0.00");
+        LevelPIDPanel.add(M2Two, new com.intellij.uiDesigner.core.GridConstraints(7, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label39 = new JLabel();
+        Font label39Font = this.$$$getFont$$$(null, Font.BOLD, 36, label39.getFont());
+        if (label39Font != null) label39.setFont(label39Font);
+        label39.setText("Pitch");
+        LevelPIDPanel.add(label39, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label40 = new JLabel();
+        Font label40Font = this.$$$getFont$$$(null, Font.BOLD, 36, label40.getFont());
+        if (label40Font != null) label40.setFont(label40Font);
+        label40.setText("Roll");
+        LevelPIDPanel.add(label40, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label41 = new JLabel();
+        Font label41Font = this.$$$getFont$$$(null, -1, 24, label41.getFont());
+        if (label41Font != null) label41.setFont(label41Font);
+        label41.setText("0");
+        LevelPIDPanel.add(label41, new com.intellij.uiDesigner.core.GridConstraints(4, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        CurrentAngleI = new JLabel();
+        Font CurrentAngleIFont = this.$$$getFont$$$(null, -1, 26, CurrentAngleI.getFont());
+        if (CurrentAngleIFont != null) CurrentAngleI.setFont(CurrentAngleIFont);
+        CurrentAngleI.setText("0.0");
+        LevelPIDPanel.add(CurrentAngleI, new com.intellij.uiDesigner.core.GridConstraints(3, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        LevelP = new JTextField();
+        LevelPIDPanel.add(LevelP, new com.intellij.uiDesigner.core.GridConstraints(4, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        LevelI = new JTextField();
+        LevelPIDPanel.add(LevelI, new com.intellij.uiDesigner.core.GridConstraints(4, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        LevelD = new JTextField();
+        LevelPIDPanel.add(LevelD, new com.intellij.uiDesigner.core.GridConstraints(4, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer7 = new com.intellij.uiDesigner.core.Spacer();
+        LevelPIDPanel.add(spacer7, new com.intellij.uiDesigner.core.GridConstraints(172, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        CurrentAngleP = new JLabel();
+        Font CurrentAnglePFont = this.$$$getFont$$$(null, -1, 26, CurrentAngleP.getFont());
+        if (CurrentAnglePFont != null) CurrentAngleP.setFont(CurrentAnglePFont);
+        CurrentAngleP.setText("0.0");
+        LevelPIDPanel.add(CurrentAngleP, new com.intellij.uiDesigner.core.GridConstraints(3, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         Motors = new JPanel();
         Motors.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(16, 9, new Insets(0, 0, 0, 0), -1, -1));
         TabPane.addTab("Motors", Motors);
         MotorController0.setValue(0);
         Motors.add(MotorController0, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer4 = new com.intellij.uiDesigner.core.Spacer();
-        Motors.add(spacer4, new com.intellij.uiDesigner.core.GridConstraints(15, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer8 = new com.intellij.uiDesigner.core.Spacer();
+        Motors.add(spacer8, new com.intellij.uiDesigner.core.GridConstraints(15, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         MotorController1.setValue(0);
         Motors.add(MotorController1, new com.intellij.uiDesigner.core.GridConstraints(5, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         MotorController2.setValue(0);
         Motors.add(MotorController2, new com.intellij.uiDesigner.core.GridConstraints(9, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         MotorController3.setValue(0);
         Motors.add(MotorController3, new com.intellij.uiDesigner.core.GridConstraints(13, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label40 = new JLabel();
-        Font label40Font = this.$$$getFont$$$(null, Font.BOLD, 24, label40.getFont());
-        if (label40Font != null) label40.setFont(label40Font);
-        label40.setText("Motor 0 (Front Right)");
-        Motors.add(label40, new com.intellij.uiDesigner.core.GridConstraints(0, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label41 = new JLabel();
-        Font label41Font = this.$$$getFont$$$(null, Font.BOLD, 24, label41.getFont());
-        if (label41Font != null) label41.setFont(label41Font);
-        label41.setText("Motor 1 (Front Left)");
-        Motors.add(label41, new com.intellij.uiDesigner.core.GridConstraints(4, 3, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label42 = new JLabel();
         Font label42Font = this.$$$getFont$$$(null, Font.BOLD, 24, label42.getFont());
         if (label42Font != null) label42.setFont(label42Font);
-        label42.setText("Motor 2 (Back Left)");
-        Motors.add(label42, new com.intellij.uiDesigner.core.GridConstraints(8, 2, 1, 5, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label42.setText("Motor 0 (Front Right)");
+        Motors.add(label42, new com.intellij.uiDesigner.core.GridConstraints(0, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label43 = new JLabel();
         Font label43Font = this.$$$getFont$$$(null, Font.BOLD, 24, label43.getFont());
         if (label43Font != null) label43.setFont(label43Font);
-        label43.setText("Motor 3 (Back Right)");
-        Motors.add(label43, new com.intellij.uiDesigner.core.GridConstraints(12, 1, 1, 7, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label43.setText("Motor 1 (Front Left)");
+        Motors.add(label43, new com.intellij.uiDesigner.core.GridConstraints(4, 3, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label44 = new JLabel();
-        label44.setText("0");
-        Motors.add(label44, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        Font label44Font = this.$$$getFont$$$(null, Font.BOLD, 24, label44.getFont());
+        if (label44Font != null) label44.setFont(label44Font);
+        label44.setText("Motor 2 (Back Left)");
+        Motors.add(label44, new com.intellij.uiDesigner.core.GridConstraints(8, 2, 1, 5, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label45 = new JLabel();
-        label45.setText("100");
-        Motors.add(label45, new com.intellij.uiDesigner.core.GridConstraints(0, 5, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_EAST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        Font label45Font = this.$$$getFont$$$(null, Font.BOLD, 24, label45.getFont());
+        if (label45Font != null) label45.setFont(label45Font);
+        label45.setText("Motor 3 (Back Right)");
+        Motors.add(label45, new com.intellij.uiDesigner.core.GridConstraints(12, 1, 1, 7, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label46 = new JLabel();
         label46.setText("0");
-        Motors.add(label46, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        Motors.add(label46, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label47 = new JLabel();
-        label47.setText("0");
-        Motors.add(label47, new com.intellij.uiDesigner.core.GridConstraints(8, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label47.setText("100");
+        Motors.add(label47, new com.intellij.uiDesigner.core.GridConstraints(0, 5, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_EAST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label48 = new JLabel();
         label48.setText("0");
-        Motors.add(label48, new com.intellij.uiDesigner.core.GridConstraints(12, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        Motors.add(label48, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label49 = new JLabel();
-        label49.setText("100");
-        Motors.add(label49, new com.intellij.uiDesigner.core.GridConstraints(4, 6, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_EAST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label49.setText("0");
+        Motors.add(label49, new com.intellij.uiDesigner.core.GridConstraints(8, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label50 = new JLabel();
-        label50.setText("100");
-        Motors.add(label50, new com.intellij.uiDesigner.core.GridConstraints(8, 7, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_EAST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label50.setText("0");
+        Motors.add(label50, new com.intellij.uiDesigner.core.GridConstraints(12, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label51 = new JLabel();
         label51.setText("100");
-        Motors.add(label51, new com.intellij.uiDesigner.core.GridConstraints(12, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_EAST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        Motors.add(label51, new com.intellij.uiDesigner.core.GridConstraints(4, 6, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_EAST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label52 = new JLabel();
+        label52.setText("100");
+        Motors.add(label52, new com.intellij.uiDesigner.core.GridConstraints(8, 7, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_EAST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label53 = new JLabel();
+        label53.setText("100");
+        Motors.add(label53, new com.intellij.uiDesigner.core.GridConstraints(12, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_EAST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         Font Speed0Font = this.$$$getFont$$$(null, Font.BOLD, 24, Speed0.getFont());
         if (Speed0Font != null) Speed0.setFont(Speed0Font);
         Speed0.setText("0");
@@ -1468,15 +1616,15 @@ public class DriverStation
         if (Speed3Font != null) Speed3.setFont(Speed3Font);
         Speed3.setText("0");
         Motors.add(Speed3, new com.intellij.uiDesigner.core.GridConstraints(14, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label52 = new JLabel();
-        label52.setText("");
-        Motors.add(label52, new com.intellij.uiDesigner.core.GridConstraints(3, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label53 = new JLabel();
-        label53.setText("");
-        Motors.add(label53, new com.intellij.uiDesigner.core.GridConstraints(7, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label54 = new JLabel();
         label54.setText("");
-        Motors.add(label54, new com.intellij.uiDesigner.core.GridConstraints(11, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        Motors.add(label54, new com.intellij.uiDesigner.core.GridConstraints(3, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label55 = new JLabel();
+        label55.setText("");
+        Motors.add(label55, new com.intellij.uiDesigner.core.GridConstraints(7, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label56 = new JLabel();
+        label56.setText("");
+        Motors.add(label56, new com.intellij.uiDesigner.core.GridConstraints(11, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         DriverPanel = new JPanel();
         DriverPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(9, 5, new Insets(0, 0, 0, 0), -1, -1));
         panelMain.add(DriverPanel, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
@@ -1503,9 +1651,9 @@ public class DriverStation
         if (BatteryVoltageFont != null) BatteryVoltage.setFont(BatteryVoltageFont);
         BatteryVoltage.setText("Battery Voltage: 0.00 V");
         DriverPanel.add(BatteryVoltage, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 5, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label55 = new JLabel();
-        label55.setText("Select Antenna COM Port");
-        DriverPanel.add(label55, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label57 = new JLabel();
+        label57.setText("Select Antenna COM Port");
+        DriverPanel.add(label57, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         COMCombo.setLightWeightPopupEnabled(true);
         DriverPanel.add(COMCombo, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         ConsoleScrollPane = new JScrollPane();
@@ -1514,9 +1662,9 @@ public class DriverStation
         Console.setEditable(false);
         ConsoleScrollPane.setViewportView(Console);
         DriverPanel.add(ControllerCombo, new com.intellij.uiDesigner.core.GridConstraints(6, 0, 1, 4, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label56 = new JLabel();
-        label56.setText("Select Controller");
-        DriverPanel.add(label56, new com.intellij.uiDesigner.core.GridConstraints(5, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label58 = new JLabel();
+        label58.setText("Select Controller");
+        DriverPanel.add(label58, new com.intellij.uiDesigner.core.GridConstraints(5, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         mpuZeroButton = new JButton();
         Font mpuZeroButtonFont = this.$$$getFont$$$(null, Font.BOLD, 18, mpuZeroButton.getFont());
         if (mpuZeroButtonFont != null) mpuZeroButton.setFont(mpuZeroButtonFont);
@@ -1528,8 +1676,8 @@ public class DriverStation
         controllerWarningPanel = new JPanel();
         controllerWarningPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         DriverPanel.add(controllerWarningPanel, new com.intellij.uiDesigner.core.GridConstraints(5, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer5 = new com.intellij.uiDesigner.core.Spacer();
-        DriverPanel.add(spacer5, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer9 = new com.intellij.uiDesigner.core.Spacer();
+        DriverPanel.add(spacer9, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
     }
 
     /**

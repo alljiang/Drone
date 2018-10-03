@@ -18,8 +18,9 @@
                                         [sign 0/+ or 1/-][kD*100000>>24][kD*100000%(0x1000000)>>16][kD*100000%(0x10000)>>8][kD*100000%(0x100)]
 -----To Command Station-------
 [command][information][checksum]
+[0xB]  current MPU angles             [pitch, limited -100 to 100][roll, limited -100 to 100]
 [0xA]  current battery voltage        [voltage * 10]
 [9]    current motor value            [FR, 0 to 100][FL, 0 to 100][BL, 0 to 100][BR, 0 to 100]
-[8]    current MPU readings           [yaw, limited -100 to 100][pitch, limited -100 to 100][roll, limited -100 to 100]
+[8]    current MPU rates              [yawRate, limited -100 to 100][pitchRate, limited -100 to 100][rollRate, limited -100 to 100]
 [7]    number of msg bytes            [number of following bytes (UNSIGNED)][char][char][char]...
 

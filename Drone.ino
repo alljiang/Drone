@@ -46,19 +46,17 @@ float yawkd = 0;
 float kp = 0.0;
 float ki = 0.0;
 float kd = 0.0;
+float levelkp = 0.0;
+float levelki = 0.0;
+float levelkd = 0.0;
 long lastTime = 0;
-double IntegralYaw = 0;
-double IntegralPitch = 0;
-double IntegralRoll = 0;
+double IntegralAnglePitch= 0;
+double IntegralAngleRoll= 0;
 double IntegralYawRate = 0;
 double IntegralPitchRate = 0;
 double IntegralRollRate = 0;
-double expectedYaw = 0;
-double expectedPitch = 0;
-double expectedRoll = 0;
-double currentYaw = 0;
-double currentPitch = 0;
-double currentRoll = 0;
+double IntegralPitchAngle = 0;
+double IntegralRollAngle = 0;
 double currentYawAngle = 0;
 double currentPitchAngle = 0;
 double currentRollAngle = 0;
@@ -79,9 +77,8 @@ double lastRollRate = 0;
 double lastErrorYawRate = 0;
 double lastErrorPitchRate = 0;
 double lastErrorRollRate = 0;
-double lastYaw = 0;
-double lastPitch = 0;
-double lastRoll = 0;
+double lastPitchAngle = 0;
+double lastRollAngle = 0;
 double lastYawRate = 0;
 double voltage = 0;
 double XAxis = 0;
@@ -95,13 +92,13 @@ int POVYAxis = 0;
 long lastCommandTime = 0;
 double maxPID = 23;
 double maxIntegral = 10;
-double maxIntegralRate = 10;
 double currentMotor0 = 0;
 double currentMotor1 = 0;
 double currentMotor2 = 0;
 double currentMotor3 = 0;
 double pitch_level_adjust = 0;
 double roll_level_adjust = 0;
+int printLoop = 0;
 
 long sendPeriod = 200;
 long lastSend = 0;
@@ -224,12 +221,14 @@ void sendUpdates()
 	if(millis() < lastSentTime + updateFrequency) return;
 	lastSentTime = millis();
   voltage = getBatteryVoltage();
+  byte mpuAngles[] = {0xB, (byte)currentPitchAngle, (byte)currentRollAngle};
   byte battery[] = {0xA, (byte)(voltage*10)};
 	byte motors[] = {0x9, (byte)currentMotor0, (byte)currentMotor1, (byte)currentMotor2, (byte)currentMotor3};
-	byte mpu[] = {0x8, (byte)currentYaw, (byte)currentPitch, (byte)currentRoll};
+	byte mpuRates[] = {0x8, (byte)currentYawRate, (byte)currentPitchRate, (byte)currentRollRate};
+  send(mpuAngles, 3);
   send(battery, 2);
 	send(motors, 5);
-	send(mpu, 4);
+	send(mpuRates, 4);
 }
 
 /*********************************************************************************************************/
@@ -240,23 +239,7 @@ void receiveCommands() {
   byte command = cmd[0];
   if(command >= 0 && command < 6) lastCommandTime = millis();
   lastCommandTime = millis();
-  if(command == 0x0) //enable / disable
-  {
-    byte holder[1];
-    Serial.readBytes(holder, 1);
-	  byte checksum[1];
-	  Serial.readBytes(checksum, 1);
-	  byte calculatedChecksum = holder[0] + command;
-	  if (calculatedChecksum != checksum[0])
-	  {
-   		Serial.flush();
-  		return;
-  	}
-//    if(holder[0] == 0x0 && enabled) disable();
-//    else if(holder[0] == 0x1 && !enabled) enable();
-    return;
-  }
-  else if(command == 0x1) //zero gyro
+  if(command == 0x1) //zero gyro
   {
     byte holder[2];
     readSerial(holder, 2);
@@ -399,6 +382,39 @@ void receiveCommands() {
     if(holder[0] == 0) yawTrim -= 1;
     else if(holder[0] == 1) yawTrim += 1;
   }
+  else if(command == 0x7) //set Angular PID constants
+  {   
+    byte holder[15];
+    readSerial(holder, 15);
+    byte checksum[1];
+    readSerial(checksum, 1);
+    byte calculatedChecksum = calculateChecksum(holder, 15) + command;
+    if (calculatedChecksum != checksum[0])
+    {
+      sendConsole("PID");
+      Serial.flush();
+      return;
+    }
+    long kp_sign = holder[0] == 0 ? 1 : -1;
+    long kp_1 = ((long)holder[1]<<24);
+    long kp_2 = ((long)holder[2]<<16);
+    long kp_3 = ((long)holder[3]<<8);
+    long kp_4 = ((long)holder[4]<<0);
+    levelkp = kp_sign*(kp_1 + kp_2 + kp_3 + kp_4) / 100000.;
+    long ki_sign = holder[5] == 0 ? 1 : -1;
+    long ki_1 = ((long)holder[6]<<24);
+    long ki_2 = ((long)holder[7]<<16);
+    long ki_3 = ((long)holder[8]<<8);
+    long ki_4 = ((long)holder[9]<<0);
+    levelki = ki_sign*(ki_1 + ki_2 + ki_3 + ki_4) / 100000.;
+    long kd_sign = holder[10] == 0 ? 1 : -1;
+    long kd_1 = ((long)holder[11]<<24);
+    long kd_2 = ((long)holder[12]<<16);
+    long kd_3 = ((long)holder[13]<<8);
+    long kd_4 = ((long)holder[14]<<0);
+    levelkd = kd_sign*(kd_1 + kd_2 + kd_3 + kd_4) / 100000.;
+    sendConsole(String(levelkp));
+  }
 }
 
 void readSerial(byte arr[], int numToRead) {
@@ -421,15 +437,11 @@ void readSerial(byte arr[], int numToRead) {
 /*********************************************************************************************************/
 
 void enable() {
-  IntegralYaw = 0;
-  IntegralPitch = 0;
-  IntegralRoll = 0;
-  lastErrorYaw = currentYaw;
-  lastErrorPitch = currentPitch;
-  lastErrorRoll = currentRoll;
-  lastYaw = currentYaw;
-  lastErrorPitch = currentPitch;
-  lastErrorRoll = currentRoll;
+  IntegralAnglePitch= 0;
+  IntegralAngleRoll= 0;
+  lastErrorYaw = currentYawAngle;
+  lastErrorPitch = currentPitchAngle;
+  lastErrorRoll = currentRollAngle;
   lastTime = millis();
   enabled = true;
   setSpeedFR(0);  
@@ -446,49 +458,57 @@ void disable() {
   setSpeedBR(0);
 }
 
-void updateGyroValues() {
-  yawOffset += currentYaw;  
-  pitchOffset += currentPitch;
-  rollOffset += currentRoll;
-}
-
-int printLoop = 0;
-
 void drive() {
   
-  if(currentPitch != lastPitch && currentRoll != lastRoll) {
+  if(currentPitchAngle != lastPitchAngle && currentRollAngle != lastRollAngle) {
     if(RYAxis > 100) RYAxis = map(RYAxis, 156, 250, -100, 0);
     if(RXAxis > 100) RXAxis = map(RXAxis, 156, 250, -100, 0);
 
-//    pitch_level_adjust = currentPitchAngle * 1.5;                                    //Calculate the pitch angle correction
-//    roll_level_adjust = currentRollAngle * 1.5;                                      //Calculate the roll angle correction
-
-    double expectedPitchRate = map(RYAxis, -100, 100, -27, 27) - pitch_level_adjust;
-    double expectedRollRate = map(RXAxis, -100, 100, 27, -27) - roll_level_adjust;
+    //pitch angle calculations
+    double errorPitchAngle = currentPitchAngle;
+    double changePitchAngle = currentPitchAngle;
+    IntegralPitchAngle += ki * errorPitchAngle / 100000.;
+    if(IntegralPitchAngle > maxIntegral) IntegralPitchAngle = maxIntegral;
+    if(IntegralPitchAngle < -maxIntegral) IntegralPitchAngle = -maxIntegral;
+    lastPitchAngle = currentPitchAngle;
+    float pitchPIDOutputAngle = kp * errorPitchAngle/1000. + IntegralPitchAngle + kd * changePitchAngle/100.;
     
-    float FROutput = YAxis;
-    float FLOutput = YAxis;
-    float BLOutput = YAxis;
-    float BROutput = YAxis;
+    if(pitchPIDOutputAngle > maxPID) pitchPIDOutputAngle = maxPID;
+    if(pitchPIDOutputAngle < -maxPID) pitchPIDOutputAngle = -maxPID;
 
-    //pitch calculations
+    //roll angle calculations
+    double errorRollAngle = currentRollAngle;
+    double changeRollAngle = currentRollAngle;
+    IntegralRollAngle += ki * errorRollAngle / 100000.;
+    if(IntegralRollAngle > maxIntegral) IntegralRollAngle = maxIntegral;
+    if(IntegralRollAngle < -maxIntegral) IntegralRollAngle = -maxIntegral;
+   
+    float rollPIDOutputAngle = kp * errorRollAngle/1000. + IntegralRollAngle + kd * changeRollAngle/100.;
+    lastRollAngle = currentRollAngle;
+    if(rollPIDOutputAngle > maxPID) rollPIDOutputAngle = maxPID;
+    if(rollPIDOutputAngle < -maxPID) rollPIDOutputAngle = -maxPID;
+    
+    double expectedPitchRate = map(RYAxis, -100, 100, -27, 27) - pitchPIDOutputAngle;
+    double expectedRollRate = map(RXAxis, -100, 100, 27, -27) - rollPIDOutputAngle;
+
+    //pitch rate calculations
     double errorPitchRate = currentPitchRate - expectedPitchRate;
     double changePitchRate = currentPitchRate - lastPitchRate;
     IntegralPitchRate += ki * errorPitchRate / 100000.;
-    if(IntegralPitchRate > maxIntegralRate) IntegralPitchRate = maxIntegralRate;
-    if(IntegralPitchRate < -maxIntegralRate) IntegralPitchRate = -maxIntegralRate;
+    if(IntegralPitchRate > maxIntegral) IntegralPitchRate = maxIntegral;
+    if(IntegralPitchRate < -maxIntegral) IntegralPitchRate = -maxIntegral;
     lastPitchRate = currentPitchRate;
     float pitchPIDOutputRate = kp * errorPitchRate/1000. + IntegralPitchRate + kd * changePitchRate/100.;
     
     if(pitchPIDOutputRate > maxPID) pitchPIDOutputRate = maxPID;
     if(pitchPIDOutputRate < -maxPID) pitchPIDOutputRate = -maxPID;
 
-    //roll calculations
+    //roll rate calculations
     double errorRollRate = currentRollRate - expectedRollRate;
     double changeRollRate = currentRollRate - lastRollRate;
     IntegralRollRate += ki * errorRollRate / 100000.;
-    if(IntegralRollRate > maxIntegralRate) IntegralRollRate = maxIntegralRate;
-    if(IntegralRollRate < -maxIntegralRate) IntegralRollRate = -maxIntegralRate;
+    if(IntegralRollRate > maxIntegral) IntegralRollRate = maxIntegral;
+    if(IntegralRollRate < -maxIntegral) IntegralRollRate = -maxIntegral;
    
     float rollPIDOutputRate = kp * errorRollRate/1000. + IntegralRollRate + kd * changeRollRate/100.;
     lastRollRate = currentRollRate;
@@ -500,18 +520,19 @@ void drive() {
     double errorYawRate = currentYawRate - expectedYawRate;
     double changeErrorYawRate = errorYawRate - lastErrorYawRate;
     IntegralYawRate += yawki * errorYawRate / 100000.;
-    if(IntegralYawRate > maxIntegralRate) IntegralYawRate = maxIntegralRate;
-    if(IntegralYawRate < -maxIntegralRate) IntegralYawRate = -maxIntegralRate;
+    if(IntegralYawRate > maxIntegral) IntegralYawRate = maxIntegral;
+    if(IntegralYawRate < -maxIntegral) IntegralYawRate = -maxIntegral;
    
     float yawPIDOutputRate = yawkp * errorYawRate/100. + IntegralYawRate/100. + yawkd * changeErrorYawRate/100.;
     lastErrorYawRate = errorYawRate;
     if(yawPIDOutputRate > maxPID) yawPIDOutputRate = maxPID;
     if(yawPIDOutputRate < -maxPID) yawPIDOutputRate = -maxPID;
-    
-    FROutput += pitchPIDOutputRate - rollPIDOutputRate - yawPIDOutputRate + yawTrim + pitchTrim - rollTrim;
-    FLOutput += pitchPIDOutputRate + rollPIDOutputRate + yawPIDOutputRate - yawTrim + pitchTrim + rollTrim;
-    BLOutput += -pitchPIDOutputRate + rollPIDOutputRate - yawPIDOutputRate + yawTrim - pitchTrim + rollTrim;
-    BROutput += -pitchPIDOutputRate - rollPIDOutputRate + yawPIDOutputRate - yawTrim - pitchTrim - rollTrim;
+
+    float FROutput = YAxis + pitchPIDOutputRate - rollPIDOutputRate - yawPIDOutputRate + yawTrim + pitchTrim - rollTrim;
+    float FLOutput = YAxis + pitchPIDOutputRate + rollPIDOutputRate + yawPIDOutputRate - yawTrim + pitchTrim + rollTrim;
+    float BLOutput = YAxis + -pitchPIDOutputRate + rollPIDOutputRate - yawPIDOutputRate + yawTrim - pitchTrim + rollTrim;
+    float BROutput = YAxis + -pitchPIDOutputRate - rollPIDOutputRate + yawPIDOutputRate - yawTrim - pitchTrim - rollTrim;
+
     //compensate for voltage
     FROutput += FROutput*(12.6-voltage)/34.5;
     FLOutput += FLOutput*(12.6-voltage)/34.5;
@@ -534,18 +555,14 @@ void slowSendConsole(String str, int skips) {
 
 void calibrateMPU()
 {
-  yawOffset += currentYaw;
-  pitchOffset += currentPitch;
-  rollOffset += currentRoll;
+  yawOffset += currentYawAngle;
+  pitchOffset += currentPitchAngle;
+  rollOffset += currentRollAngle;
   yawTrim = 0;
   pitchTrim = 0;
   rollTrim = 0;
-  currentYaw = 0;
-  currentPitch = 0;
-  currentRoll = 0;
-  IntegralYaw = 0;
-  IntegralPitch = 0;
-  IntegralRoll = 0;
+  IntegralAnglePitch= 0;
+  IntegralAngleRoll= 0;
   lastErrorYaw = 0;
   lastErrorPitch = 0;
   lastErrorRoll = 0;
@@ -555,7 +572,6 @@ void calibrateMPU()
   lastErrorYawRate = 0;
   lastErrorPitchRate = 0;
   lastErrorRollRate = 0;
-  lastYaw = 0;
 }
 
 void setSpeedFR(double speed) {
@@ -673,9 +689,5 @@ void mpuLoop()
         currentYawRate = currentYawRate*.7+ (-mpu.getRotationZ()/65.5)*.3;
         currentPitchRate = currentPitchRate*.7+ (-mpu.getRotationY()/65.5)*.3;
         currentRollRate = currentRollRate*.7+ (mpu.getRotationX()/65.5)*.3;
-        
-        currentYaw = currentYawRate;
-        currentPitch = currentPitchRate;
-        currentRoll = currentRollRate;
     }
 }
