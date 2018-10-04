@@ -90,7 +90,7 @@ boolean LTrig = false;
 int POVXAxis = 0;
 int POVYAxis = 0;
 long lastCommandTime = 0;
-double maxPID = 23;
+double maxPID = 30;
 double maxIntegral = 10;
 double currentMotor0 = 0;
 double currentMotor1 = 0;
@@ -126,13 +126,10 @@ void setup() {
   wdt_reset();
 //  configureHC12();
   sendConsole("Started");
-  setSpeedFR(0);
-  setSpeedFL(0);
-  setSpeedBL(0);
-  setSpeedBR(0);
   delay(1000);
   sendConsole("Starting MPU Setup");
   mpuSetup();
+  wdt_reset();
   sendConsole("MPU Setup Successful");
   lastCommandTime = millis();
   lastSentTime = millis();
@@ -488,8 +485,8 @@ void drive() {
     if(rollPIDOutputAngle > maxPID) rollPIDOutputAngle = maxPID;
     if(rollPIDOutputAngle < -maxPID) rollPIDOutputAngle = -maxPID;
     
-    double expectedPitchRate = map(RYAxis, -100, 100, -27, 27) - pitchPIDOutputAngle;
-    double expectedRollRate = map(RXAxis, -100, 100, 27, -27) - rollPIDOutputAngle;
+    double expectedPitchRate = map(RYAxis, -100, 100, -35, 35) - pitchPIDOutputAngle;
+    double expectedRollRate = map(RXAxis, -100, 100, 35, -35) - rollPIDOutputAngle;
 
     //pitch rate calculations
     double errorPitchRate = currentPitchRate - expectedPitchRate;
@@ -561,17 +558,14 @@ void calibrateMPU()
   yawTrim = 0;
   pitchTrim = 0;
   rollTrim = 0;
-  IntegralAnglePitch= 0;
-  IntegralAngleRoll= 0;
   lastErrorYaw = 0;
   lastErrorPitch = 0;
   lastErrorRoll = 0;
+  IntegralAnglePitch= 0;
+  IntegralAngleRoll= 0;
   IntegralYawRate = 0;
   IntegralPitchRate = 0;
   IntegralRollRate = 0;
-  lastErrorYawRate = 0;
-  lastErrorPitchRate = 0;
-  lastErrorRollRate = 0;
 }
 
 void setSpeedFR(double speed) {
