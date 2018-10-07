@@ -17,6 +17,9 @@ void setup() {
   Serial.begin(receiveBaud);
   hc12.begin(sendBaud);
   delay(1000);
+  hc12.print("AT+B38400");
+  delay(100);
+  Serial.println(hc12.readString());
   digitalWrite(HC12SetPin, HIGH);
 }
 
@@ -51,4 +54,12 @@ void send(byte toSend[], int length) {
   packet[length] = calculateChecksum(packet, length);
   Serial.write(packet, length+1);
   Serial.flush();
+}
+
+byte calculateChecksum(byte arr[], int length)
+{
+    byte sum = 0;
+    for(int i = 0; i < length; i++)
+      sum += arr[i];
+    return sum;
 }
