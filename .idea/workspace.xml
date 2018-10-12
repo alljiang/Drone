@@ -2,13 +2,16 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="fcef4201-74c2-494c-a836-cc7ab88bb933" name="Default" comment="">
+      <change afterPath="$PROJECT_DIR$/Schematic.PNG" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Drone.ino" beforeDir="false" afterPath="$PROJECT_DIR$/Drone.ino" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/PIDStorage.dat" beforeDir="false" afterPath="$PROJECT_DIR$/PIDStorage.dat" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Radio/Radio.ino" beforeDir="false" afterPath="$PROJECT_DIR$/Radio/Radio.ino" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/drone serial comm.txt" beforeDir="false" afterPath="$PROJECT_DIR$/drone serial comm.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Drone/DriverStation$10.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Drone/DriverStation$10.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Drone/DriverStation.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Drone/DriverStation.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Drone/TimeLimitedCodeBlock$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Drone/TimeLimitedCodeBlock$1.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Drone/TimeLimitedCodeBlock.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Drone/TimeLimitedCodeBlock.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/DriverStation.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/DriverStation.java" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/out/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -24,31 +27,24 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="DriverStation.form" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/DriverStation.form">
-          <provider selected="true" editor-type-id="ui-designer" />
+      <file leaf-file-name="drone serial comm.txt" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/drone serial comm.txt">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="40">
+              <caret line="2" column="5" selection-start-line="2" selection-start-column="5" selection-end-line="2" selection-end-column="5" />
+            </state>
+          </provider>
         </entry>
       </file>
       <file leaf-file-name="DriverStation.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/DriverStation.java">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="240">
-              <caret line="731" column="55" lean-forward="true" selection-start-line="731" selection-start-column="55" selection-end-line="731" selection-end-column="55" />
+              <caret line="560" column="38" selection-start-line="560" selection-start-column="38" selection-end-line="560" selection-end-column="38" />
               <folding>
-                <element signature="e#43870#119394#0" expanded="true" />
-                <element signature="e#43870#119394#0" expanded="true" />
-                <element signature="e#120235#120236#0" expanded="true" />
-                <element signature="e#120267#120268#0" expanded="true" />
+                <element signature="e#43891#119422#0" expanded="true" />
+                <element signature="e#43891#119422#0" expanded="true" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="drone serial comm.txt" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/drone serial comm.txt">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="400">
-              <caret line="20" column="38" selection-start-line="20" selection-start-column="38" selection-end-line="20" selection-end-column="38" />
             </state>
           </provider>
         </entry>
@@ -64,24 +60,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>todo</find>
-      <find>drive()</find>
-      <find>5</find>
-      <find>new byte[]{5</find>
-      <find>btn4</find>
-      <find>cmv</find>
-      <find>battery</find>
-      <find>batter`</find>
-      <find>read</find>
-      <find>pitch</find>
-      <find>kp</find>
-      <find>buttons</find>
-      <find>trim</find>
-      <find>last</find>
-      <find>axi</find>
-      <find>save</find>
-      <find>pid</find>
-      <find>updatepid</find>
       <find>updat</find>
       <find>printwriter</find>
       <find>pw</find>
@@ -94,6 +72,24 @@
       <find>bufferedreader</find>
       <find>received</find>
       <find>m2</find>
+      <find>sent</find>
+      <find>baud</find>
+      <find>readB</find>
+      <find>x</find>
+      <find>7</find>
+      <find>receive</find>
+      <find>print</find>
+      <find>system</find>
+      <find>system.out.print</find>
+      <find>printtoConsole</find>
+      <find>38400</find>
+      <find>receive()</find>
+      <find>joysti</find>
+      <find>yaxis</find>
+      <find>drive</find>
+      <find>disable</find>
+      <find>send</find>
+      <find>thread</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -111,8 +107,8 @@
         <option value="$PROJECT_DIR$/src/sandbox.java" />
         <option value="$PROJECT_DIR$/src/SerialPortTest.java" />
         <option value="$PROJECT_DIR$/PIDStorage.dat" />
-        <option value="$PROJECT_DIR$/drone serial comm.txt" />
         <option value="$PROJECT_DIR$/src/DriverStation.form" />
+        <option value="$PROJECT_DIR$/drone serial comm.txt" />
         <option value="$PROJECT_DIR$/src/DriverStation.java" />
       </list>
     </option>
@@ -124,10 +120,10 @@
     <sorting>DEFINITION_ORDER</sorting>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-482" />
+    <option name="x" value="-485" />
     <option name="y" value="335" />
-    <option name="width" value="1943" />
-    <option name="height" value="744" />
+    <option name="width" value="1945" />
+    <option name="height" value="745" />
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">
@@ -172,8 +168,8 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
       <pane id="PackagesPane" />
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -188,20 +184,20 @@
     <property name="settings.editor.selected.configurable" value="vcs.Git" />
   </component>
   <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\User\Documents\GitHub\Drone" />
+      <recent name="C:\Users\User\Documents\GitHub\Drone\src" />
+      <recent name="C:\Users\User\Desktop\Drone\Libraries" />
+      <recent name="C:\Users\User\Desktop\Drone" />
+    </key>
+    <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\User\Desktop\Drone\Libraries" />
       <recent name="C:\Users\Allen\Documents\workspace\Drone" />
       <recent name="C:\Users\User\Desktop\Drone" />
       <recent name="C:\Users\Allen\Documents\workspace\Drone\src" />
-    </key>
-    <key name="CopyClassDialog.RECENTS_KEY">
-      <recent name="" />
-    </key>
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="C:\Users\User\Documents\GitHub\Drone\src" />
-      <recent name="C:\Users\User\Documents\GitHub\Drone" />
-      <recent name="C:\Users\User\Desktop\Drone\Libraries" />
-      <recent name="C:\Users\User\Desktop\Drone" />
     </key>
   </component>
   <component name="RunDashboard">
@@ -422,7 +418,10 @@
       <workItem from="1538429719157" duration="7672000" />
       <workItem from="1538438801057" duration="21166000" />
       <workItem from="1538530786258" duration="9040000" />
-      <workItem from="1538612143039" duration="31396000" />
+      <workItem from="1538612143039" duration="49215000" />
+      <workItem from="1538970462633" duration="9904000" />
+      <workItem from="1539191117617" duration="2181000" />
+      <workItem from="1539208465853" duration="15588000" />
     </task>
     <servers />
   </component>
@@ -441,7 +440,7 @@
     </history-entry>
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="477177000" />
+    <option name="totallyTimeSpent" value="522669000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-7" y="-7" width="1550" height="878" extended-state="6" />
@@ -449,7 +448,7 @@
     <layout>
       <window_info anchor="right" id="Palette" order="3" />
       <window_info anchor="bottom" id="TODO" order="6" />
-      <window_info anchor="bottom" id="Messages" order="10" weight="0.3941236" />
+      <window_info anchor="bottom" id="Messages" order="10" weight="0.3929961" />
       <window_info anchor="right" id="Palette&#9;" order="9" />
       <window_info id="Image Layers" order="6" />
       <window_info anchor="right" id="Capture Analysis" order="6" />
@@ -457,11 +456,11 @@
       <window_info anchor="right" id="Maven Projects" order="4" />
       <window_info anchor="bottom" id="Database Changes" order="11" show_stripe_button="false" />
       <window_info anchor="bottom" id="Version Control" order="8" />
-      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49671593" visible="true" weight="0.25551233" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" sideWeight="0.49671593" visible="true" weight="0.25162128" />
       <window_info anchor="bottom" id="Terminal" order="9" />
       <window_info id="Capture Tool" order="2" />
       <window_info id="Designer" order="3" />
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.14908855" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.14908855" />
       <window_info anchor="right" id="Database" order="5" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -469,8 +468,8 @@
       <window_info anchor="right" id="Theme Preview" order="7" />
       <window_info id="Favorites" order="5" side_tool="true" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.20233463" />
-      <window_info anchor="right" id="Coverage" order="8" side_tool="true" weight="0.028645834" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="Coverage" order="8" side_tool="true" weight="0.028645834" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="right" id="Commander" order="0" weight="0.4" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -479,34 +478,34 @@
     </layout>
     <layout-to-restore>
       <window_info anchor="right" id="Palette" order="3" />
-      <window_info anchor="bottom" id="Version Control" order="8" />
-      <window_info anchor="bottom" id="Find" order="1" visible="true" weight="0.32905295" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
       <window_info anchor="right" id="Capture Analysis" order="6" />
-      <window_info id="Capture Tool" order="2" />
+      <window_info anchor="bottom" id="Version Control" order="8" />
       <window_info anchor="right" id="Theme Preview" order="7" />
-      <window_info anchor="bottom" id="Terminal" order="9" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Messages" order="10" weight="0.39429313" />
+      <window_info content_ui="combo" id="Project" order="0" weight="0.1673177" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info anchor="right" id="Commander" order="0" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info anchor="bottom" id="Database Changes" order="11" show_stripe_button="false" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info active="true" anchor="bottom" id="Run" order="2" sideWeight="0.49671593" visible="true" weight="0.27107653" />
       <window_info id="Image Layers" order="6" />
       <window_info id="Designer" order="3" />
       <window_info id="UI Designer" order="4" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.2034588" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="right" id="Database" order="5" />
       <window_info anchor="right" id="Palette&#9;" order="9" />
       <window_info anchor="right" id="Coverage" order="8" side_tool="true" weight="0.028645834" />
-      <window_info anchor="bottom" id="Event Log" order="7" sideWeight="0.5032841" side_tool="true" weight="0.30212766" />
-      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.2034588" />
+      <window_info anchor="bottom" id="Database Changes" order="11" show_stripe_button="false" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-      <window_info id="Favorites" order="5" side_tool="true" />
-      <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Messages" order="10" weight="0.39429313" />
+      <window_info anchor="bottom" id="Event Log" order="7" sideWeight="0.5032841" side_tool="true" weight="0.30212766" />
+      <window_info id="Capture Tool" order="2" />
+      <window_info anchor="bottom" id="Find" order="1" visible="true" weight="0.32905295" />
+      <window_info anchor="bottom" id="Terminal" order="9" />
       <window_info anchor="right" id="Maven Projects" order="4" />
-      <window_info content_ui="combo" id="Project" order="0" weight="0.1673177" />
+      <window_info id="Favorites" order="5" side_tool="true" />
     </layout-to-restore>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -525,17 +524,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/DriverStation.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1200">
-          <caret line="60" column="26" lean-forward="true" selection-start-line="60" selection-start-column="26" selection-end-line="60" selection-end-column="26" />
-          <folding>
-            <element signature="e#18742#18743#0" expanded="true" />
-            <element signature="e#18783#18784#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/drone serial comm.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="40">
@@ -547,10 +535,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1100">
           <caret line="55" column="4" selection-start-line="55" selection-start-column="4" selection-end-line="55" selection-end-column="4" />
-          <folding>
-            <element signature="e#18742#18743#0" expanded="true" />
-            <element signature="e#18783#18784#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -565,10 +549,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="13080">
           <caret line="654" column="16" lean-forward="true" selection-start-line="654" selection-start-column="16" selection-end-line="654" selection-end-column="16" />
-          <folding>
-            <element signature="e#18742#18743#0" expanded="true" />
-            <element signature="e#18783#18784#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -576,10 +556,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="4092">
           <caret line="202" column="36" selection-start-line="202" selection-start-column="36" selection-end-line="202" selection-end-column="36" />
-          <folding>
-            <element signature="e#18742#18743#0" expanded="true" />
-            <element signature="e#18783#18784#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -594,10 +570,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1650">
           <caret line="80" selection-start-line="80" selection-end-line="80" />
-          <folding>
-            <element signature="e#18742#18743#0" expanded="true" />
-            <element signature="e#18783#18784#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -612,10 +584,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="726">
           <caret line="34" selection-start-line="34" selection-end-line="34" />
-          <folding>
-            <element signature="e#18742#18743#0" expanded="true" />
-            <element signature="e#18783#18784#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -722,9 +690,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/DriverStation.form">
-      <provider selected="true" editor-type-id="ui-designer" />
-    </entry>
     <entry file="file://$PROJECT_DIR$/README.md">
       <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
         <state split_layout="SPLIT">
@@ -735,22 +700,26 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/Schematic.PNG">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Drone.vcxproj">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
     <entry file="file://$PROJECT_DIR$/drone serial comm.txt">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="400">
-          <caret line="20" column="38" selection-start-line="20" selection-start-column="38" selection-end-line="20" selection-end-column="38" />
+        <state relative-caret-position="40">
+          <caret line="2" column="5" selection-start-line="2" selection-start-column="5" selection-end-line="2" selection-end-column="5" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/DriverStation.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="240">
-          <caret line="731" column="55" lean-forward="true" selection-start-line="731" selection-start-column="55" selection-end-line="731" selection-end-column="55" />
+          <caret line="560" column="38" selection-start-line="560" selection-start-column="38" selection-end-line="560" selection-end-column="38" />
           <folding>
-            <element signature="e#43870#119394#0" expanded="true" />
-            <element signature="e#43870#119394#0" expanded="true" />
-            <element signature="e#120235#120236#0" expanded="true" />
-            <element signature="e#120267#120268#0" expanded="true" />
+            <element signature="e#43891#119422#0" expanded="true" />
+            <element signature="e#43891#119422#0" expanded="true" />
           </folding>
         </state>
       </provider>

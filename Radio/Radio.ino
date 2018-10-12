@@ -2,12 +2,13 @@
 
 #include <SoftwareSerial.h>
 
-byte HC12SetPin = 9;
+byte HC12SetPin = 2;
 byte HC12TXPin = 7;
 byte HC12RXPin = 4;
 
-long receiveBaud = 57600;
-long sendBaud = 9600;
+long receiveBaud = 38400;
+long sendBaud = 38400;
+long initialHC12Baud = 38400;
 
 SoftwareSerial hc12(HC12TXPin, HC12RXPin); //tx, rx
 
@@ -15,10 +16,12 @@ void setup() {
   pinMode(HC12SetPin, OUTPUT);
   digitalWrite(HC12SetPin, LOW);
   Serial.begin(receiveBaud);
-  hc12.begin(sendBaud);
+  hc12.begin(initialHC12Baud);
   delay(1000);
-  hc12.print("AT+B38400");
+  sendConsole("Receiver connected");
+  hc12.print(("AT+B"+String(sendBaud)));
   delay(100);
+  hc12.begin(sendBaud);
   Serial.println(hc12.readString());
   digitalWrite(HC12SetPin, HIGH);
 }
