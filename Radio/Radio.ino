@@ -6,9 +6,9 @@ byte HC12SetPin = 2;
 byte HC12TXPin = 7;
 byte HC12RXPin = 4;
 
-long receiveBaud = 38400;
-long sendBaud = 38400;
-long initialHC12Baud = 38400;
+long receiveBaud = 57600;
+long sendBaud = 57600;
+long initialHC12Baud = 9600;
 
 SoftwareSerial hc12(HC12TXPin, HC12RXPin); //tx, rx
 

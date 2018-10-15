@@ -138,7 +138,7 @@ public class DriverStation
     double yawkp, yawki, yawkd;
     double kp, ki, kd;
     double rollkp, rollki, rollkd;
-    int baudRate = 38400;
+    int baudRate = 57600;
     int selectedControllerPort = 0;
     ArrayDeque<Double> rollStorage = new ArrayDeque<>();
     ArrayDeque<Double> pitchStorage = new ArrayDeque<>();
@@ -555,10 +555,29 @@ public class DriverStation
             {
                 try
                 {
+                    long lastUpdate = 0;
+                    long lastReceive = 0;
+                    long lastSent = 0;
+                    int updatePeriod = 10;
+                    int receivePeriod = 5;
+                    int sendPeriod = 7;
                     while (true)
                     {
-                        update();
-                        Thread.sleep(50);
+                        if (System.currentTimeMillis() - lastUpdate > updatePeriod)
+                        {
+                            update();
+                            lastUpdate = System.currentTimeMillis();
+                        }
+                        if (System.currentTimeMillis() - lastReceive > receivePeriod)
+                        {
+                            receive();
+                            lastReceive = System.currentTimeMillis();
+                        }
+                        if (System.currentTimeMillis() - lastSent > sendPeriod)
+                        {
+                            send();
+                            lastSent = System.currentTimeMillis();
+                        }
                     }
                 } catch (Exception e)
                 {
@@ -566,7 +585,24 @@ public class DriverStation
                 }
             }
         };
-        Thread receiveLoop = new Thread()
+//        Thread receiveLoop = new Thread()
+//        {
+//            public void run()
+//            {
+//                try
+//                {
+//                    while (true)
+//                    {
+//                        receive();
+//                        Thread.sleep(5);
+//                    }
+//                } catch (Exception e)
+//                {
+//                    e.printStackTrace();
+//                }
+//            }
+//        };
+        Thread sendLoop = new Thread()
         {
             public void run()
             {
@@ -574,8 +610,8 @@ public class DriverStation
                 {
                     while (true)
                     {
-                        receive();
-                        Thread.sleep(20);
+                        if (sendQueue.size() > 0) send();
+                        Thread.sleep(10);
                     }
                 } catch (Exception e)
                 {
@@ -584,8 +620,8 @@ public class DriverStation
             }
         };
         updateLoop.start();
-        receiveLoop.start();
-
+//        receiveLoop.start(); //debug
+        sendLoop.start();
     }
 
     private void enable()
@@ -643,18 +679,27 @@ public class DriverStation
         double toChange = timeLength * YAxisVal / ((YAxisVal > 0) ? 3000. : 2500.);
         currentThrottle += toChange;
         currentThrottle = Math.min(100, Math.max(0, currentThrottle));
-        send(new byte[]{0x2, (byte) currentThrottle, (byte)  Math.round(RYAxisVal), (byte) Math.round(RXAxisVal), Btn6 ? (byte) 1 : (byte) 0, Btn7 ? (byte) 1 : (byte) 0});
+        send(new byte[]{0x2, (byte) currentThrottle, (byte) Math.round(RYAxisVal), (byte) Math.round(RXAxisVal), Btn6 ? (byte) 1 : (byte) 0, Btn7 ? (byte) 1 : (byte) 0});
         System.out.println((byte) currentThrottle);
     }
 
     int errorReportLoops = 5;
     int errorReportLoopsCount = 0;
+    ArrayDeque<byte[]> sendQueue = new ArrayDeque<>();
 
+    //adds the array to the queue
     private void send(byte[] toSend)
     {
-        if (toSend.length == 0) return;
+        sendQueue.offer(toSend);
+    }
+
+    //sends the next item in the queue
+    private void send()
+    {
+        if (sendQueue.size() == 0) return;
         try
         {
+            byte[] toSend = sendQueue.pollFirst();
             byte[] packet = concatenate(toSend, new byte[]{calculateChecksum(toSend)});
             if (port != null) port.writeBytes(packet, packet.length);
         } catch (Exception e)
@@ -806,6 +851,9 @@ public class DriverStation
         return b & 0xFF;
     }
 
+    long lastMotorTest = 0;
+    long motorTestPeriod = 30;
+
     private void update()
     {
         //Update Serial Port list
@@ -892,12 +940,15 @@ public class DriverStation
         }
 
         if (droneEnabled) drive();
-            //motor testing
-        else
+        else //motor testing
         {
-            byte[] toSend = new byte[]{0x3, (byte) MotorController0.getValue(), (byte) MotorController1.getValue(),
-                    (byte) MotorController2.getValue(), (byte) MotorController3.getValue()};
-            send(toSend);
+            if (System.currentTimeMillis() - lastMotorTest > motorTestPeriod)
+            {
+                lastMotorTest = System.currentTimeMillis();
+                byte[] toSend = new byte[]{0x3, (byte) MotorController0.getValue(), (byte) MotorController1.getValue(),
+                        (byte) MotorController2.getValue(), (byte) MotorController3.getValue()};
+                send(toSend);
+            }
         }
 
         if (Btn8) disable();
@@ -1030,10 +1081,15 @@ public class DriverStation
         }
     }
 
+    long lastUpdatePID = 0;
+    long minUpdatePIDPeriod = 1000;
+
     private String updatePID(boolean rate)
     {
         String text = kp + " " + ki + " " + kd + " " + yawkp + " " + yawki + " " + yawkd + " "
                 + levelkp + " " + levelki + " " + levelkd;
+        if (System.currentTimeMillis() - lastUpdatePID < minUpdatePIDPeriod) return text;
+        lastUpdatePID = System.currentTimeMillis();
         printToConsole("Set PID to: " + text);
         if (rate)
         {
@@ -1098,9 +1154,13 @@ public class DriverStation
         pitchStorage.clear();
     }
 
+    long lastZeroMPU = 0;
+
     private void zeroMPU()
     {
-        for (int i = 0; i < 10; i++)
+        if (System.currentTimeMillis() - lastZeroMPU < 50) return;
+        lastZeroMPU = System.currentTimeMillis();
+        for (int i = 0; i < 3; i++)
             send(new byte[]{0x1, 0x2, 0x3});
     }
 
@@ -1127,7 +1187,6 @@ public class DriverStation
      * Method generated by IntelliJ IDEA GUI Designer
      * >>> IMPORTANT!! <<<
      * DO NOT edit this method OR call it in your code!
-     *
      *
      * @noinspection ALL
      */
