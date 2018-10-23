@@ -4,17 +4,14 @@
 */
 #include <SoftwareSerial.h>
 #include <avr/wdt.h>
-
-//=========================================MPU STUFF======================================================================================================
 #include <MPU6050_tockn.h>
 #include <Wire.h>
 MPU6050 mpu6050(Wire);
-//========================================================================================================================================================
 
 SoftwareSerial hc12(9,8); //rx, tx
 
 const int SetPin = 7;
-float yawkp = 0;
+float yawkp = 20;
 float yawki = 0;
 float yawkd = 0;
 float kp = 0.0;
@@ -77,6 +74,7 @@ double pitch_level_adjust = 0;
 double roll_level_adjust = 0;
 int printLoop = 0;
 int lastAvailable = 0;
+boolean enabled = false;
 
 long lastUpdateMPUAngles = 0;
 long lastUpdateBattery = 0;
@@ -91,13 +89,11 @@ long updateMPURatesPeriod = 130;
 long timeout = 600;
 long receiveTimeout = 30;
 long sampleTime = 4;
-int controlRate = 35;
+int controlRate = 125;
 
-boolean enabled = false;
-
-boolean FRESC = false;
+boolean FRESC = true;
 boolean FLESC = true;
-boolean BLESC = false;
+boolean BLESC = true;
 boolean BRESC = true;
 
 long initialBaud = 9600;
@@ -181,7 +177,7 @@ void sendConsole(String s)
 {
   int totalLength = s.length() + 2;
   byte byt[s.length() + 2];
-  byt[0] = 0x7;
+  byt[0] = 100;
   byt[1] = s.length();
   for (int i = 0; i < s.length(); i++)
     byt[i + 2] = s.charAt(i);
@@ -199,10 +195,10 @@ byte cksum(byte buffer[], int numToCal)
 void sendUpdates()
 {
   voltage = getBatteryVoltage();
-  byte mpuAngles[] = {0xB, (byte)currentPitchAngle, (byte)currentRollAngle};
-  byte battery[] = {0xA, (byte)(voltage * 10)};
-  byte motors[] = {0x9, (byte)currentMotor0, (byte)currentMotor1, (byte)currentMotor2, (byte)currentMotor3};
-  byte mpuRates[] = {0x8, (byte)currentYawRate, (byte)currentPitchRate, (byte)currentRollRate};
+  byte mpuAngles[] = {104, (byte)currentPitchAngle, (byte)currentRollAngle};
+  byte battery[] = {103, (byte)(voltage * 10)};
+  byte motors[] = {102, (byte)currentMotor0, (byte)currentMotor1, (byte)currentMotor2, (byte)currentMotor3};
+  byte mpuRates[] = {101, (byte)currentYawRate, (byte)currentPitchRate, (byte)currentRollRate};
 
   float tNow = millis();
   if(tNow - lastUpdateMPUAngles > updateMPUAnglesPeriod) {
@@ -235,7 +231,6 @@ void receiveCommands() {
   }
   lastAvailable = availableBytes;
   byte command = hc12.peek();
-  if (command >= 0 && command < 6) lastCommandTime = millis();
   if (command == 0x1) //zero gyro
   {
     if(availableBytes >= (1+2+1)) {
@@ -316,18 +311,18 @@ void receiveCommands() {
     double speedBR = holder[3];
     writeESC(speedFR, speedFL, speedBL, speedBR);
   }
-  else if (command == 0x4) //set PID constants
+  else if (command == 0x4) //set rate PID constants
   {
-    if(availableBytes >= (1+30+1)) {
+    if(availableBytes >= (1+15+1)) {
       byte trash[] = {};
       hc12.readBytes(trash, 1);
     }
     else return;
-    byte holder[30];
-    readSerial(holder, 30);
+    byte holder[15];
+    readSerial(holder, 15);
     byte checksum[1];
     readSerial(checksum, 1);
-    byte calculatedChecksum = calculateChecksum(holder, 30) + command;
+    byte calculatedChecksum = calculateChecksum(holder, 15) + command;
     if (calculatedChecksum != checksum[0])
     {
       sendConsole("p");
@@ -352,24 +347,6 @@ void receiveCommands() {
     long kd_3 = ((long)holder[13] << 8);
     long kd_4 = ((long)holder[14] << 0);
     kd = kd_sign * (kd_1 + kd_2 + kd_3 + kd_4) / 100000.;
-    long yawkp_sign = holder[15] == 0 ? 1 : -1;
-    long yawkp_1 = ((long)holder[16] << 24);
-    long yawkp_2 = ((long)holder[17] << 16);
-    long yawkp_3 = ((long)holder[18] << 8);
-    long yawkp_4 = ((long)holder[19] << 0);
-    yawkp = yawkp_sign * (yawkp_1 + yawkp_2 + yawkp_3 + yawkp_4) / 100000.;
-    long yawki_sign = holder[20] == 0 ? 1 : -1;
-    long yawki_1 = ((long)holder[21] << 24);
-    long yawki_2 = ((long)holder[22] << 16);
-    long yawki_3 = ((long)holder[23] << 8);
-    long yawki_4 = ((long)holder[24] << 0);
-    yawki = yawki_sign * (yawki_1 + yawki_2 + yawki_3 + yawki_4) / 100000.;
-    long yawkd_sign = holder[25] == 0 ? 1 : -1;
-    long yawkd_1 = ((long)holder[26] << 24);
-    long yawkd_2 = ((long)holder[27] << 16);
-    long yawkd_3 = ((long)holder[28] << 8);
-    long yawkd_4 = ((long)holder[29] << 0);
-    yawkd = yawkd_sign * (yawkd_1 + yawkd_2 + yawkd_3 + yawkd_4) / 100000.;
     sendConsole(String(kp));
   }
   else if (command == 0x5) //set translational trim
@@ -450,6 +427,44 @@ void receiveCommands() {
     levelkd = kd_sign * (kd_1 + kd_2 + kd_3 + kd_4) / 100000.;
     sendConsole(String(levelkp));
   }
+  else if (command == 0x8) //set rotational PID constants
+  {
+    if(availableBytes >= (1+15+1)) {
+      byte trash[] = {};
+      hc12.readBytes(trash, 1);
+    }
+    else return;
+    byte holder[15];
+    readSerial(holder, 15);
+    byte checksum[1];
+    readSerial(checksum, 1);
+    byte calculatedChecksum = calculateChecksum(holder, 15) + command;
+    if (calculatedChecksum != checksum[0])
+    {
+      sendConsole("d");
+      hc12.flush();
+      return;
+    }
+    long yawkp_sign = holder[0] == 0 ? 1 : -1;
+    long yawkp_1 = ((long)holder[1] << 24);
+    long yawkp_2 = ((long)holder[2] << 16);
+    long yawkp_3 = ((long)holder[3] << 8);
+    long yawkp_4 = ((long)holder[4] << 0);
+    yawkp = yawkp_sign * (yawkp_1 + yawkp_2 + yawkp_3 + yawkp_4) / 100000.;
+    long yawki_sign = holder[5] == 0 ? 1 : -1;
+    long yawki_1 = ((long)holder[6] << 24);
+    long yawki_2 = ((long)holder[7] << 16);
+    long yawki_3 = ((long)holder[8] << 8);
+    long yawki_4 = ((long)holder[9] << 0);
+    yawki = yawki_sign * (yawki_1 + yawki_2 + yawki_3 + yawki_4) / 100000.;
+    long yawkd_sign = holder[10] == 0 ? 1 : -1;
+    long yawkd_1 = ((long)holder[11] << 24);
+    long yawkd_2 = ((long)holder[12] << 16);
+    long yawkd_3 = ((long)holder[13] << 8);
+    long yawkd_4 = ((long)holder[14] << 0);
+    yawkd = yawkd_sign * (yawkd_1 + yawkd_2 + yawkd_3 + yawkd_4) / 100000.;
+    sendConsole(String(yawkp));
+  }
   else {
     byte trash[] = {};
     hc12.readBytes(trash, 1);
@@ -478,6 +493,9 @@ void readSerial(byte arr[], int numToRead) {
 void enable() {
   IntegralAnglePitch = 0;
   IntegralAngleRoll = 0;
+  IntegralPitchRate = 0;
+  IntegralRollRate = 0;
+  IntegralYawRate = 0;
   lastErrorYaw = currentYawAngle;
   lastErrorPitch = currentPitchAngle;
   lastErrorRoll = currentRollAngle;
@@ -492,9 +510,6 @@ void disable() {
 }
 
 void drive() {
-  //  while(currentPitchAngle == lastPitchAngle || currentRollAngle == lastRollAngle) {
-  //    mpuLoop();
-  //  }
   if(currentPitchAngle == lastPitchAngle || currentRollAngle == lastRollAngle) return;
   if (RYAxis > 100) RYAxis = map(RYAxis, 156, 250, -100, 0);
   if (RXAxis > 100) RXAxis = map(RXAxis, 156, 250, -100, 0);
@@ -534,8 +549,8 @@ void drive() {
   if (IntegralPitchRate > maxIntegral) IntegralPitchRate = maxIntegral;
   if (IntegralPitchRate < -maxIntegral) IntegralPitchRate = -maxIntegral;
 
-  float pitchPIDOutputRate = kp * errorPitchRate / 1000. + IntegralPitchRate + kd * changePitchRate / 100.;
-  //    float pitchPIDOutputRate = kp * errorPitchRate/1000. + IntegralPitchRate + kd * changeErrorPitchRate/100.;
+//  float pitchPIDOutputRate = kp * errorPitchRate / 1000. + IntegralPitchRate + kd * changePitchRate / 100.;
+  float pitchPIDOutputRate = kp * errorPitchRate/1000. + IntegralPitchRate + kd * changeErrorPitchRate/100.;
   lastPitchRate = currentPitchRate;
   lastErrorPitchRate = errorPitchRate;
   if (pitchPIDOutputRate > maxPID) pitchPIDOutputRate = maxPID;
@@ -549,9 +564,8 @@ void drive() {
   if (IntegralRollRate > maxIntegral) IntegralRollRate = maxIntegral;
   if (IntegralRollRate < -maxIntegral) IntegralRollRate = -maxIntegral;
 
-  float rollPIDOutputRate = kp * errorRollRate / 1000. + IntegralRollRate + kd * changeRollRate / 100.;
-  //    float rollPIDOutputRate = kp * errorRollRate/1000. + IntegralRollRate + kd * changeErrorRollRate/100.;
-  //  slowSendConsole(String(kp*errorPitchRate/1000.) + " " + String(IntegralPitchRate) + " " + String(kd*changePitchRate/100.), 40);
+//  float rollPIDOutputRate = kp * errorRollRate / 1000. + IntegralRollRate + kd * changeRollRate / 100.;
+  float rollPIDOutputRate = kp * errorRollRate/1000. + IntegralRollRate + kd * changeErrorRollRate/100.;
   lastRollRate = currentRollRate;
   lastErrorRollRate = errorRollRate;
   if (rollPIDOutputRate > maxPID) rollPIDOutputRate = maxPID;
@@ -580,8 +594,6 @@ void drive() {
   //  FLOutput += FLOutput*(12.6-voltage)/34.5;
   //  BLOutput += BLOutput*(12.6-voltage)/34.5;
   //  BROutput += BROutput*(12.6-voltage)/34.5;
-
-  if(FROutput < 20 && FROutput > 16) slowSendConsole("f",20);
   
   writeESC(FROutput, FLOutput, BLOutput, BROutput);
 }
@@ -621,21 +633,25 @@ void writeESC(float FR, float FL, float BL, float BR) {
   if (BR < 0 || !BRESC) BR = 0;
   else if (BR > 100) BR = 100;
 
+//  float BLOffset = 0.16 * BL + -5.259225; //for the bad esc
+//  if(BLOffset > 0) BL += BLOffset;
+
   currentMotor0 = FR;
   currentMotor1 = FL;
   currentMotor2 = BL;
   currentMotor3 = BR;
 
-  long escFR = long(map(FR, 0, 100, 995, 1832));
-  long escFL = long(map(FL, 0, 100, 995, 1832));
-  long escBL = long(map(BL, 0, 100, 995, 1832));
-  long escBR = long(map(BR, 0, 100, 995, 1832));
+  long escFR = long(map(FR, 0, 100, 1100, 1832));
+  long escFL = long(map(FL, 0, 100, 1100, 1832));
+  long escBL = long(map(BL, 0, 100, 1100, 1832));
+  long escBR = long(map(BR, 0, 100, 1100, 1832));
+  
   if(FR == 0) escFR = 950;
   if(FL == 0) escFL = 950;
   if(BL == 0) escBL = 950;
   if(BR == 0) escBR = 950;
   
-  long arr[][2] = {{escFR-900,6},{escFL-900,5},{escBL-900,4},{escBR-900,3}}; //debug //{speed, ESCPin}
+  long arr[][2] = {{escFR-900,6},{escFL-900,5},{escBL-900,4},{escBR-900,3}}; //{speed, ESCPin}
   bubbleSort(arr, 4);
   arr[3][0] -= arr[2][0];
   arr[2][0] -= arr[1][0];
@@ -704,9 +720,12 @@ void mpuLoop()
   float currentRawGyroZ = -mpu6050.getGyroZ();
   float currentRawGyroY = -mpu6050.getGyroY();
   float currentRawGyroX = mpu6050.getGyroX();
-  currentYawRate = currentYawRate * .7 + (currentRawGyroZ - lastRawGyroZ) * .3; //high pass filter
-  currentPitchRate = currentPitchRate * .7 + (currentRawGyroY - lastRawGyroY) * .3;
-  currentRollRate = currentRollRate * .7 + (currentRawGyroX - lastRawGyroX) * .3;
+//  currentYawRate = currentYawRate * .7 + (currentRawGyroZ - lastRawGyroZ) * .3; //high pass filter
+//  currentPitchRate = currentPitchRate * .7 + (currentRawGyroY - lastRawGyroY) * .3;
+//  currentRollRate = currentRollRate * .7 + (currentRawGyroX - lastRawGyroX) * .3;
+  currentYawRate = currentYawRate * .7 + (currentRawGyroZ) * .3;
+  currentPitchRate = currentPitchRate * .7 + (currentRawGyroY) * .3;
+  currentRollRate = currentRollRate * .7 + (currentRawGyroX) * .3;
   lastRawGyroZ = currentRawGyroZ;
   lastRawGyroY = currentRawGyroY;
   lastRawGyroX = currentRawGyroX;

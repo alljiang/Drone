@@ -130,6 +130,7 @@ public class DriverStation
     private JButton LevelApplyChanges;
     private JLabel currentPitchAngle;
     private JLabel currentRollAngle;
+    private JButton RotationalApplyChanges;
     SerialPort port = null;
     boolean droneEnabled = false;
     boolean continueClock = false;
@@ -166,7 +167,7 @@ public class DriverStation
                 printToConsole("Set controller to " + ControllerCombo.getItemAt(ControllerCombo.getSelectedIndex()));
             }
         });
-        applyChangesButton.addActionListener(new ActionListener()
+        RotationalApplyChanges.addActionListener(new ActionListener()
         {
             @Override
             public void actionPerformed(ActionEvent e)
@@ -174,42 +175,51 @@ public class DriverStation
                 String yp = YawP.getText();
                 String yi = YawI.getText();
                 String yd = YawD.getText();
-                String pp = PitchP.getText();
-                String pi = PitchI.getText();
-                String pd = PitchD.getText();
-                String rp = PitchP.getText();
-                String ri = PitchI.getText();
-                String rd = PitchD.getText();
                 if (yp.length() > 0) yawkp = Double.parseDouble(yp);
                 if (yi.length() > 0) yawki = Double.parseDouble(yi);
                 if (yd.length() > 0) yawkd = Double.parseDouble(yd);
-                if (pp.length() > 0) kp = Double.parseDouble(pp);
-                if (pi.length() > 0) ki = Double.parseDouble(pi);
-                if (pd.length() > 0) kd = Double.parseDouble(pd);
-                if (rp.length() > 0) rollkp = Double.parseDouble(rp);
-                if (ri.length() > 0) rollki = Double.parseDouble(ri);
-                if (rd.length() > 0) rollkd = Double.parseDouble(rd);
                 YawP.setText("");
                 YawI.setText("");
                 YawD.setText("");
-                PitchP.setText("");
-                PitchI.setText("");
-                PitchD.setText("");
-                RollP.setText("");
-                RollI.setText("");
-                RollD.setText("");
 
-                String text = updatePID(true);
+                String text = updatePIDRotational();
 
                 CurrentYawP.setText(yawkp + "");
                 CurrentYawI.setText(yawki + "");
                 CurrentYawD.setText(yawkd + "");
+                try
+                {
+                    PrintWriter pw = new PrintWriter("PIDStorage.dat");
+                    pw.println(text);
+                    pw.close();
+                } catch (FileNotFoundException e1)
+                {
+                    e1.printStackTrace();
+                }
+            }
+        });
+        applyChangesButton.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                String pp = PitchP.getText();
+                String pi = PitchI.getText();
+                String pd = PitchD.getText();
+                if (pp.length() > 0) kp = Double.parseDouble(pp);
+                if (pi.length() > 0) ki = Double.parseDouble(pi);
+                if (pd.length() > 0) kd = Double.parseDouble(pd);
+                PitchP.setText("");
+                PitchI.setText("");
+                PitchD.setText("");
+
+                String text = updatePIDRate();
                 CurrentPitchP.setText(kp + "");
                 CurrentPitchI.setText(ki + "");
                 CurrentPitchD.setText(kd + "");
-                CurrentRollP.setText(rollkp + "");
-                CurrentRollI.setText(rollki + "");
-                CurrentRollD.setText(rollkd + "");
+                CurrentRollP.setText(kp + "");
+                CurrentRollI.setText(ki + "");
+                CurrentRollD.setText(kd + "");
                 try
                 {
                     PrintWriter pw = new PrintWriter("PIDStorage.dat");
@@ -236,11 +246,14 @@ public class DriverStation
                 CurrentAngleI.setText("");
                 CurrentAngleD.setText("");
 
-                String text = updatePID(false);
+                String text = updatePIDLevel();
 
                 CurrentAngleP.setText(levelkp + "");
                 CurrentAngleI.setText(levelki + "");
                 CurrentAngleD.setText(levelkd + "");
+                LevelP.setText("");
+                LevelI.setText("");
+                LevelD.setText("");
                 try
                 {
                     PrintWriter pw = new PrintWriter("PIDStorage.dat");
@@ -306,6 +319,25 @@ public class DriverStation
                 }
             }
         };
+
+        Action updatePIDRate = new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                updatePIDRate();
+            }
+        };
+
+        Action updatePIDLevel = new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                updatePIDLevel();
+            }
+        };
+
         panelMain.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
         panelMain.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
         panelMain.getActionMap().put("disable", disable);
@@ -327,12 +359,19 @@ public class DriverStation
         TabPane.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
         TabPane.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
         TabPane.getActionMap().put("disable", disable);
+        applyChangesButton.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_P, 0), "ratePID");
+        applyChangesButton.getActionMap().put("ratePID", updatePIDRate);
         applyChangesButton.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
         applyChangesButton.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
         applyChangesButton.getActionMap().put("disable", disable);
+        LevelApplyChanges.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_P, 0), "levelPID");
+        LevelApplyChanges.getActionMap().put("levelPID", updatePIDLevel);
         LevelApplyChanges.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
         LevelApplyChanges.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
         LevelApplyChanges.getActionMap().put("disable", disable);
+        RotationalApplyChanges.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
+        RotationalApplyChanges.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
+        RotationalApplyChanges.getActionMap().put("disable", disable);
         YawP.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "disable");
         YawP.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "disable");
         YawP.getActionMap().put("disable", disable);
@@ -585,43 +624,7 @@ public class DriverStation
                 }
             }
         };
-//        Thread receiveLoop = new Thread()
-//        {
-//            public void run()
-//            {
-//                try
-//                {
-//                    while (true)
-//                    {
-//                        receive();
-//                        Thread.sleep(5);
-//                    }
-//                } catch (Exception e)
-//                {
-//                    e.printStackTrace();
-//                }
-//            }
-//        };
-        Thread sendLoop = new Thread()
-        {
-            public void run()
-            {
-                try
-                {
-                    while (true)
-                    {
-                        if (sendQueue.size() > 0) send();
-                        Thread.sleep(10);
-                    }
-                } catch (Exception e)
-                {
-                    e.printStackTrace();
-                }
-            }
-        };
         updateLoop.start();
-//        receiveLoop.start(); //debug
-        sendLoop.start();
     }
 
     private void enable()
@@ -729,8 +732,8 @@ public class DriverStation
             byte[] cmd = new byte[1];
             port.readBytes(cmd, 1);
             int command = unsign(cmd[0]);
-            if (command < 7 || command > 0xB) return;
-            if (command == 0xB)
+            if (command < 100 || command > 104) return;
+            if (command == 104)
             {
                 byte[] readings = new byte[2];
                 readBytes(readings, 2);
@@ -744,7 +747,7 @@ public class DriverStation
                 }
                 currentPitchAngle.setText(readings[0] + "");
                 currentRollAngle.setText(readings[1] + "");
-            } else if (command == 0xA)
+            } else if (command == 103) //battery voltage
             {
                 byte[] batteryValue = new byte[1];
                 port.readBytes(batteryValue, 1);
@@ -757,7 +760,7 @@ public class DriverStation
                     return;
                 }
                 BatteryVoltage.setText("Battery Voltage: " + (batteryValue[0] / 10.) + "V");
-            } else if (command == 9) //CURRENT MOTOR VALUES
+            } else if (command == 102) //CURRENT MOTOR VALUES
             {
                 byte[] motorValues = new byte[4];
                 port.readBytes(motorValues, 4);
@@ -773,7 +776,7 @@ public class DriverStation
                 M1.setText("M1: " + motorValues[1]);
                 M2.setText("M2: " + motorValues[2]);
                 M3.setText("M3: " + motorValues[3]);
-            } else if (command == 8)//CURRENT MPU RATES
+            } else if (command == 101)//CURRENT MPU RATES
             {
                 byte[] readings = new byte[3];
                 port.readBytes(readings, 3);
@@ -788,7 +791,7 @@ public class DriverStation
                 currentYaw.setText(readings[0] + "");
                 currentPitch.setText(readings[1] + "");
                 currentRoll.setText(readings[2] + "");
-            } else if (command == 7) //MESSAGE INTO CONSOLE
+            } else if (command == 100) //MESSAGE INTO CONSOLE
             {
                 byte[] sizeSigned = new byte[1];
                 port.readBytes(sizeSigned, 1);
@@ -797,12 +800,6 @@ public class DriverStation
                 port.readBytes(strArr, size);
                 byte[] checkSum = new byte[1];
                 port.readBytes(checkSum, 1);
-                byte calculatedChecksum = (byte) (cmd[0] + calculateChecksum(strArr) + size);
-//                if (calculatedChecksum != checkSum[0])
-//                {
-//                    flush();
-//                    return;
-//                }
                 String s = "";
                 for (byte b : strArr) s += (char) unsign(b);
                 printToConsole(s);
@@ -1084,42 +1081,60 @@ public class DriverStation
     long lastUpdatePID = 0;
     long minUpdatePIDPeriod = 1000;
 
-    private String updatePID(boolean rate)
+    private String updatePIDLevel()
     {
         String text = kp + " " + ki + " " + kd + " " + yawkp + " " + yawki + " " + yawkd + " "
                 + levelkp + " " + levelki + " " + levelkd;
         if (System.currentTimeMillis() - lastUpdatePID < minUpdatePIDPeriod) return text;
         lastUpdatePID = System.currentTimeMillis();
-        printToConsole("Set PID to: " + text);
-        if (rate)
-        {
-            byte[] toSend = new byte[]{4,
-                    (byte) (kp < 0 ? 1 : 0), (byte) ((int) (Math.abs(kp) * 100000) >> 24), (byte) ((int) (Math.abs(kp) * 100000) >> 16 % (0x1000000)),
-                    (byte) ((int) (Math.abs(kp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kp) * 100000) % (0x100)),
-                    (byte) (ki < 0 ? 1 : 0), (byte) ((int) (Math.abs(ki) * 100000) >> 24), (byte) ((int) (Math.abs(ki) * 100000) >> 16 % (0x1000000)),
-                    (byte) ((int) (Math.abs(ki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(ki) * 100000) % (0x100)),
-                    (byte) (kd < 0 ? 1 : 0), (byte) ((int) (Math.abs(kd) * 100000) >> 24), (byte) ((int) (Math.abs(kd) * 100000) >> 16 % (0x1000000)),
-                    (byte) ((int) (Math.abs(kd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kd) * 100000) % (0x100)),
-                    (byte) (yawkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkp) * 100000) >> 24), (byte) ((int) (Math.abs(yawkp) * 100000) >> 16 % (0x1000000)),
-                    (byte) ((int) (Math.abs(yawkp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkp) * 100000) % (0x100)),
-                    (byte) (yawki < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawki) * 100000) >> 24), (byte) ((int) (Math.abs(yawki) * 100000) >> 16 % (0x1000000)),
-                    (byte) ((int) (Math.abs(yawki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawki) * 100000) % (0x100)),
-                    (byte) (yawkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkd) * 100000) >> 24), (byte) ((int) (Math.abs(yawkd) * 100000) >> 16 % (0x1000000)),
-                    (byte) ((int) (Math.abs(yawkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkd) * 100000) % (0x100))
-            };
-            send(toSend);
-        } else
-        {
-            byte[] toSend = new byte[]{7,
-                    (byte) (levelkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(levelkp) * 100000) >> 24), (byte) ((int) (Math.abs(levelkp) * 100000) >> 16 % (0x1000000)),
-                    (byte) ((int) (Math.abs(levelkp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(levelkp) * 100000) % (0x100)),
-                    (byte) (levelki < 0 ? 1 : 0), (byte) ((int) (Math.abs(levelki) * 100000) >> 24), (byte) ((int) (Math.abs(levelki) * 100000) >> 16 % (0x1000000)),
-                    (byte) ((int) (Math.abs(levelki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(levelki) * 100000) % (0x100)),
-                    (byte) (levelkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(levelkd) * 100000) >> 24), (byte) ((int) (Math.abs(levelkd) * 100000) >> 16 % (0x1000000)),
-                    (byte) ((int) (Math.abs(levelkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(levelkd) * 100000) % (0x100))
-            };
-            send(toSend);
-        }
+        printToConsole("Set Level PID to: " + levelkp + " " + levelki + " " + levelkd);
+        byte[] toSend = new byte[]{7,
+                (byte) (levelkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(levelkp) * 100000) >> 24), (byte) ((int) (Math.abs(levelkp) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(levelkp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(levelkp) * 100000) % (0x100)),
+                (byte) (levelki < 0 ? 1 : 0), (byte) ((int) (Math.abs(levelki) * 100000) >> 24), (byte) ((int) (Math.abs(levelki) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(levelki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(levelki) * 100000) % (0x100)),
+                (byte) (levelkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(levelkd) * 100000) >> 24), (byte) ((int) (Math.abs(levelkd) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(levelkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(levelkd) * 100000) % (0x100))
+        };
+        send(toSend);
+        return text;
+    }
+
+    private String updatePIDRate()
+    {
+        String text = kp + " " + ki + " " + kd + " " + yawkp + " " + yawki + " " + yawkd + " "
+                + levelkp + " " + levelki + " " + levelkd;
+        if (System.currentTimeMillis() - lastUpdatePID < minUpdatePIDPeriod) return text;
+        lastUpdatePID = System.currentTimeMillis();
+        printToConsole("Set Rate PID to: " + kp + " " + ki + " " + kd);
+        byte[] toSend = new byte[]{4,
+                (byte) (kp < 0 ? 1 : 0), (byte) ((int) (Math.abs(kp) * 100000) >> 24), (byte) ((int) (Math.abs(kp) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(kp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kp) * 100000) % (0x100)),
+                (byte) (ki < 0 ? 1 : 0), (byte) ((int) (Math.abs(ki) * 100000) >> 24), (byte) ((int) (Math.abs(ki) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(ki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(ki) * 100000) % (0x100)),
+                (byte) (kd < 0 ? 1 : 0), (byte) ((int) (Math.abs(kd) * 100000) >> 24), (byte) ((int) (Math.abs(kd) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(kd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(kd) * 100000) % (0x100))
+        };
+        send(toSend);
+        return text;
+    }
+
+    private String updatePIDRotational()
+    {
+        String text = kp + " " + ki + " " + kd + " " + yawkp + " " + yawki + " " + yawkd + " "
+                + levelkp + " " + levelki + " " + levelkd;
+        if (System.currentTimeMillis() - lastUpdatePID < minUpdatePIDPeriod) return text;
+        lastUpdatePID = System.currentTimeMillis();
+        printToConsole("Set Rotational PID to: " + yawkp + " " + yawki + " " + yawkd);
+        byte[] toSend = new byte[]{8,
+                (byte) (yawkp < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkp) * 100000) >> 24), (byte) ((int) (Math.abs(yawkp) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(yawkp) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkp) * 100000) % (0x100)),
+                (byte) (yawki < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawki) * 100000) >> 24), (byte) ((int) (Math.abs(yawki) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(yawki) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawki) * 100000) % (0x100)),
+                (byte) (yawkd < 0 ? 1 : 0), (byte) ((int) (Math.abs(yawkd) * 100000) >> 24), (byte) ((int) (Math.abs(yawkd) * 100000) >> 16 % (0x1000000)),
+                (byte) ((int) (Math.abs(yawkd) * 100000) % (0x10000) >> 8), (byte) ((int) (Math.abs(yawkd) * 100000) % (0x100))
+        };
+        send(toSend);
         return text;
     }
 
@@ -1158,7 +1173,7 @@ public class DriverStation
 
     private void zeroMPU()
     {
-        if (System.currentTimeMillis() - lastZeroMPU < 50) return;
+        if (System.currentTimeMillis() - lastZeroMPU < 100) return;
         lastZeroMPU = System.currentTimeMillis();
         for (int i = 0; i < 3; i++)
             send(new byte[]{0x1, 0x2, 0x3});
@@ -1381,7 +1396,7 @@ public class DriverStation
         label26.setText("POV");
         ControllerPanel.add(label26, new com.intellij.uiDesigner.core.GridConstraints(16, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         PIDPanel = new JPanel();
-        PIDPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(36, 9, new Insets(0, 0, 0, 0), -1, -1));
+        PIDPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(35, 9, new Insets(0, 0, 0, 0), -1, -1));
         Font PIDPanelFont = this.$$$getFont$$$(null, -1, -1, PIDPanel.getFont());
         if (PIDPanelFont != null) PIDPanel.setFont(PIDPanelFont);
         TabPane.addTab("PID Tuning", PIDPanel);
@@ -1424,21 +1439,11 @@ public class DriverStation
         if (label30Font != null) label30.setFont(label30Font);
         label30.setText("Pitch Rate");
         PIDPanel.add(label30, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label31 = new JLabel();
-        Font label31Font = this.$$$getFont$$$(null, Font.BOLD, 28, label31.getFont());
-        if (label31Font != null) label31.setFont(label31Font);
-        label31.setText("Roll Rate");
-        PIDPanel.add(label31, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         currentPitch = new JLabel();
         Font currentPitchFont = this.$$$getFont$$$(null, -1, 24, currentPitch.getFont());
         if (currentPitchFont != null) currentPitch.setFont(currentPitchFont);
         currentPitch.setText("      0");
         PIDPanel.add(currentPitch, new com.intellij.uiDesigner.core.GridConstraints(3, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        currentRoll = new JLabel();
-        Font currentRollFont = this.$$$getFont$$$(null, -1, 24, currentRoll.getFont());
-        if (currentRollFont != null) currentRoll.setFont(currentRollFont);
-        currentRoll.setText("      0");
-        PIDPanel.add(currentRoll, new com.intellij.uiDesigner.core.GridConstraints(4, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         Font CurrentPitchPFont = this.$$$getFont$$$(null, -1, 26, CurrentPitchP.getFont());
         if (CurrentPitchPFont != null) CurrentPitchP.setFont(CurrentPitchPFont);
         CurrentPitchP.setText("0.0");
@@ -1451,72 +1456,33 @@ public class DriverStation
         if (CurrentPitchDFont != null) CurrentPitchD.setFont(CurrentPitchDFont);
         CurrentPitchD.setText("0.0");
         PIDPanel.add(CurrentPitchD, new com.intellij.uiDesigner.core.GridConstraints(3, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        PitchP = new JTextField();
-        PIDPanel.add(PitchP, new com.intellij.uiDesigner.core.GridConstraints(4, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        PitchI = new JTextField();
-        PIDPanel.add(PitchI, new com.intellij.uiDesigner.core.GridConstraints(4, 5, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        PitchD = new JTextField();
-        PIDPanel.add(PitchD, new com.intellij.uiDesigner.core.GridConstraints(4, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final com.intellij.uiDesigner.core.Spacer spacer4 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer4, new com.intellij.uiDesigner.core.GridConstraints(9, 7, 2, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer5 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer5, new com.intellij.uiDesigner.core.GridConstraints(10, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        PIDPanel.add(spacer4, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final JLabel label31 = new JLabel();
+        Font label31Font = this.$$$getFont$$$(null, Font.BOLD, 28, label31.getFont());
+        if (label31Font != null) label31.setFont(label31Font);
+        label31.setText("Pitch Angle");
+        PIDPanel.add(label31, new com.intellij.uiDesigner.core.GridConstraints(6, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label32 = new JLabel();
-        Font label32Font = this.$$$getFont$$$(null, Font.BOLD, 20, label32.getFont());
+        Font label32Font = this.$$$getFont$$$(null, Font.BOLD, 28, label32.getFont());
         if (label32Font != null) label32.setFont(label32Font);
-        label32.setText("Current Motor Values");
-        PIDPanel.add(label32, new com.intellij.uiDesigner.core.GridConstraints(1, 7, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        M1 = new JLabel();
-        Font M1Font = this.$$$getFont$$$(null, -1, 20, M1.getFont());
-        if (M1Font != null) M1.setFont(M1Font);
-        M1.setText("M1: 0.00");
-        PIDPanel.add(M1, new com.intellij.uiDesigner.core.GridConstraints(2, 7, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(133, 27), null, 0, false));
-        M0 = new JLabel();
-        Font M0Font = this.$$$getFont$$$(null, -1, 20, M0.getFont());
-        if (M0Font != null) M0.setFont(M0Font);
-        M0.setText("M0: 0.00");
-        PIDPanel.add(M0, new com.intellij.uiDesigner.core.GridConstraints(2, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        M2 = new JLabel();
-        Font M2Font = this.$$$getFont$$$(null, -1, 20, M2.getFont());
-        if (M2Font != null) M2.setFont(M2Font);
-        M2.setText("M2: 0.00");
-        PIDPanel.add(M2, new com.intellij.uiDesigner.core.GridConstraints(3, 7, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(133, 27), null, 0, false));
-        M3 = new JLabel();
-        Font M3Font = this.$$$getFont$$$(null, -1, 20, M3.getFont());
-        if (M3Font != null) M3.setFont(M3Font);
-        M3.setText("M3: 0.00");
-        PIDPanel.add(M3, new com.intellij.uiDesigner.core.GridConstraints(3, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer6 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer6, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer7 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer7, new com.intellij.uiDesigner.core.GridConstraints(4, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JLabel label33 = new JLabel();
-        Font label33Font = this.$$$getFont$$$(null, Font.BOLD, 28, label33.getFont());
-        if (label33Font != null) label33.setFont(label33Font);
-        label33.setText("Pitch Angle");
-        PIDPanel.add(label33, new com.intellij.uiDesigner.core.GridConstraints(6, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label34 = new JLabel();
-        Font label34Font = this.$$$getFont$$$(null, Font.BOLD, 28, label34.getFont());
-        if (label34Font != null) label34.setFont(label34Font);
-        label34.setText("Roll Angle");
-        PIDPanel.add(label34, new com.intellij.uiDesigner.core.GridConstraints(7, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        label32.setText("Roll Angle");
+        PIDPanel.add(label32, new com.intellij.uiDesigner.core.GridConstraints(7, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         currentPitchAngle = new JLabel();
         Font currentPitchAngleFont = this.$$$getFont$$$(null, -1, 24, currentPitchAngle.getFont());
         if (currentPitchAngleFont != null) currentPitchAngle.setFont(currentPitchAngleFont);
         currentPitchAngle.setText("      0");
         PIDPanel.add(currentPitchAngle, new com.intellij.uiDesigner.core.GridConstraints(6, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer5 = new com.intellij.uiDesigner.core.Spacer();
+        PIDPanel.add(spacer5, new com.intellij.uiDesigner.core.GridConstraints(6, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer6 = new com.intellij.uiDesigner.core.Spacer();
+        PIDPanel.add(spacer6, new com.intellij.uiDesigner.core.GridConstraints(7, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer7 = new com.intellij.uiDesigner.core.Spacer();
+        PIDPanel.add(spacer7, new com.intellij.uiDesigner.core.GridConstraints(3, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         final com.intellij.uiDesigner.core.Spacer spacer8 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer8, new com.intellij.uiDesigner.core.GridConstraints(6, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        PIDPanel.add(spacer8, new com.intellij.uiDesigner.core.GridConstraints(6, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         final com.intellij.uiDesigner.core.Spacer spacer9 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer9, new com.intellij.uiDesigner.core.GridConstraints(7, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer10 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer10, new com.intellij.uiDesigner.core.GridConstraints(3, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer11 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer11, new com.intellij.uiDesigner.core.GridConstraints(4, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer12 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer12, new com.intellij.uiDesigner.core.GridConstraints(6, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer13 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer13, new com.intellij.uiDesigner.core.GridConstraints(7, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        PIDPanel.add(spacer9, new com.intellij.uiDesigner.core.GridConstraints(7, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         currentRollAngle = new JLabel();
         Font currentRollAngleFont = this.$$$getFont$$$(null, -1, 24, currentRollAngle.getFont());
         if (currentRollAngleFont != null) currentRollAngle.setFont(currentRollAngleFont);
@@ -1543,50 +1509,98 @@ public class DriverStation
         PIDPanel.add(LevelI, new com.intellij.uiDesigner.core.GridConstraints(7, 5, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         LevelD = new JTextField();
         PIDPanel.add(LevelD, new com.intellij.uiDesigner.core.GridConstraints(7, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer14 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer14, new com.intellij.uiDesigner.core.GridConstraints(9, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JLabel label35 = new JLabel();
-        Font label35Font = this.$$$getFont$$$(null, Font.BOLD, 28, label35.getFont());
-        if (label35Font != null) label35.setFont(label35Font);
-        label35.setText("Yaw Rate");
-        PIDPanel.add(label35, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer10 = new com.intellij.uiDesigner.core.Spacer();
+        PIDPanel.add(spacer10, new com.intellij.uiDesigner.core.GridConstraints(8, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final JLabel label33 = new JLabel();
+        Font label33Font = this.$$$getFont$$$(null, Font.BOLD, 28, label33.getFont());
+        if (label33Font != null) label33.setFont(label33Font);
+        label33.setText("Yaw Rate");
+        PIDPanel.add(label33, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         currentYaw = new JLabel();
         Font currentYawFont = this.$$$getFont$$$(null, -1, 24, currentYaw.getFont());
         if (currentYawFont != null) currentYaw.setFont(currentYawFont);
         currentYaw.setText("      0");
         PIDPanel.add(currentYaw, new com.intellij.uiDesigner.core.GridConstraints(2, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer15 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer15, new com.intellij.uiDesigner.core.GridConstraints(2, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer16 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer16, new com.intellij.uiDesigner.core.GridConstraints(2, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer17 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer17, new com.intellij.uiDesigner.core.GridConstraints(9, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer11 = new com.intellij.uiDesigner.core.Spacer();
+        PIDPanel.add(spacer11, new com.intellij.uiDesigner.core.GridConstraints(2, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer12 = new com.intellij.uiDesigner.core.Spacer();
+        PIDPanel.add(spacer12, new com.intellij.uiDesigner.core.GridConstraints(2, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer13 = new com.intellij.uiDesigner.core.Spacer();
+        PIDPanel.add(spacer13, new com.intellij.uiDesigner.core.GridConstraints(8, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         YPR_Picture = new JLabel();
         YPR_Picture.setIcon(new ImageIcon(getClass().getResource("/ypr.png")));
         YPR_Picture.setText("");
         YPR_Picture.setVisible(true);
-        PIDPanel.add(YPR_Picture, new com.intellij.uiDesigner.core.GridConstraints(9, 4, 2, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_NORTH, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer18 = new com.intellij.uiDesigner.core.Spacer();
-        PIDPanel.add(spacer18, new com.intellij.uiDesigner.core.GridConstraints(8, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        PIDPanel.add(YPR_Picture, new com.intellij.uiDesigner.core.GridConstraints(8, 4, 2, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_NORTH, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         LevelApplyChanges = new JButton();
         Font LevelApplyChangesFont = this.$$$getFont$$$(null, -1, 20, LevelApplyChanges.getFont());
         if (LevelApplyChangesFont != null) LevelApplyChanges.setFont(LevelApplyChangesFont);
         LevelApplyChanges.setText("Apply Level PID");
         PIDPanel.add(LevelApplyChanges, new com.intellij.uiDesigner.core.GridConstraints(6, 7, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, new Dimension(-1, 100), 0, false));
+        final JSeparator separator1 = new JSeparator();
+        PIDPanel.add(separator1, new com.intellij.uiDesigner.core.GridConstraints(5, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        final JLabel label34 = new JLabel();
+        Font label34Font = this.$$$getFont$$$(null, Font.BOLD, 28, label34.getFont());
+        if (label34Font != null) label34.setFont(label34Font);
+        label34.setText("Roll Rate");
+        PIDPanel.add(label34, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        currentRoll = new JLabel();
+        Font currentRollFont = this.$$$getFont$$$(null, -1, 24, currentRoll.getFont());
+        if (currentRollFont != null) currentRoll.setFont(currentRollFont);
+        currentRoll.setText("      0");
+        PIDPanel.add(currentRoll, new com.intellij.uiDesigner.core.GridConstraints(4, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        PitchP = new JTextField();
+        PIDPanel.add(PitchP, new com.intellij.uiDesigner.core.GridConstraints(4, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        PitchI = new JTextField();
+        PIDPanel.add(PitchI, new com.intellij.uiDesigner.core.GridConstraints(4, 5, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        PitchD = new JTextField();
+        PIDPanel.add(PitchD, new com.intellij.uiDesigner.core.GridConstraints(4, 6, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        final JLabel label35 = new JLabel();
+        Font label35Font = this.$$$getFont$$$(null, Font.BOLD, 20, label35.getFont());
+        if (label35Font != null) label35.setFont(label35Font);
+        label35.setText("Current Motor Values");
+        PIDPanel.add(label35, new com.intellij.uiDesigner.core.GridConstraints(0, 7, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        M1 = new JLabel();
+        Font M1Font = this.$$$getFont$$$(null, -1, 20, M1.getFont());
+        if (M1Font != null) M1.setFont(M1Font);
+        M1.setText("M1: 0.00");
+        PIDPanel.add(M1, new com.intellij.uiDesigner.core.GridConstraints(1, 7, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(133, 27), null, 0, false));
+        M0 = new JLabel();
+        Font M0Font = this.$$$getFont$$$(null, -1, 20, M0.getFont());
+        if (M0Font != null) M0.setFont(M0Font);
+        M0.setText("M0: 0.00");
+        PIDPanel.add(M0, new com.intellij.uiDesigner.core.GridConstraints(1, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        M3 = new JLabel();
+        Font M3Font = this.$$$getFont$$$(null, -1, 20, M3.getFont());
+        if (M3Font != null) M3.setFont(M3Font);
+        M3.setText("M3: 0.00");
+        PIDPanel.add(M3, new com.intellij.uiDesigner.core.GridConstraints(2, 8, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        M2 = new JLabel();
+        Font M2Font = this.$$$getFont$$$(null, -1, 20, M2.getFont());
+        if (M2Font != null) M2.setFont(M2Font);
+        M2.setText("M2: 0.00");
+        PIDPanel.add(M2, new com.intellij.uiDesigner.core.GridConstraints(2, 7, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(133, 27), null, 0, false));
+        RotationalApplyChanges = new JButton();
+        Font RotationalApplyChangesFont = this.$$$getFont$$$(null, -1, 20, RotationalApplyChanges.getFont());
+        if (RotationalApplyChangesFont != null) RotationalApplyChanges.setFont(RotationalApplyChangesFont);
+        RotationalApplyChanges.setText("Apply Rotational PID");
+        PIDPanel.add(RotationalApplyChanges, new com.intellij.uiDesigner.core.GridConstraints(3, 7, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, new Dimension(-1, 100), 0, false));
         applyChangesButton = new JButton();
         Font applyChangesButtonFont = this.$$$getFont$$$(null, -1, 20, applyChangesButton.getFont());
         if (applyChangesButtonFont != null) applyChangesButton.setFont(applyChangesButtonFont);
         applyChangesButton.setText("Apply Rate PID");
         PIDPanel.add(applyChangesButton, new com.intellij.uiDesigner.core.GridConstraints(4, 7, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, new Dimension(-1, 100), 0, false));
-        final JSeparator separator1 = new JSeparator();
-        PIDPanel.add(separator1, new com.intellij.uiDesigner.core.GridConstraints(5, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer14 = new com.intellij.uiDesigner.core.Spacer();
+        PIDPanel.add(spacer14, new com.intellij.uiDesigner.core.GridConstraints(4, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer15 = new com.intellij.uiDesigner.core.Spacer();
+        PIDPanel.add(spacer15, new com.intellij.uiDesigner.core.GridConstraints(4, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         Motors = new JPanel();
         Motors.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(16, 9, new Insets(0, 0, 0, 0), -1, -1));
         TabPane.addTab("Motors", Motors);
         MotorController0.setValue(0);
         Motors.add(MotorController0, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer19 = new com.intellij.uiDesigner.core.Spacer();
-        Motors.add(spacer19, new com.intellij.uiDesigner.core.GridConstraints(15, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer16 = new com.intellij.uiDesigner.core.Spacer();
+        Motors.add(spacer16, new com.intellij.uiDesigner.core.GridConstraints(15, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         MotorController1.setValue(0);
         Motors.add(MotorController1, new com.intellij.uiDesigner.core.GridConstraints(5, 0, 1, 9, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         MotorController2.setValue(0);
@@ -1713,8 +1727,8 @@ public class DriverStation
         controllerWarningPanel = new JPanel();
         controllerWarningPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         DriverPanel.add(controllerWarningPanel, new com.intellij.uiDesigner.core.GridConstraints(5, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        final com.intellij.uiDesigner.core.Spacer spacer20 = new com.intellij.uiDesigner.core.Spacer();
-        DriverPanel.add(spacer20, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final com.intellij.uiDesigner.core.Spacer spacer17 = new com.intellij.uiDesigner.core.Spacer();
+        DriverPanel.add(spacer17, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
     }
 
     /**
