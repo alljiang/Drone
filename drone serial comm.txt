@@ -1,7 +1,5 @@
 -----To Drone-----------------
-
-[command][checksum][everything else][checksum]
-[0]  enabled                            [0-disable,1-enable]
+[command][everything else][checksum]
 [1]  zero mpu                           [2][3] (helps verify checksum)
 [2]  joystick values                    [LY, -100 to 100, thrust][RY, -100 to 100, front/back tilt][RX, -100 to 100, side tilt][RTrig 0/1][LTrig 0/1]
 [3]  set motor speeds (for testing)     [FR, 0 to 100][FL, 0 to 100][BL, 0 to 100][BR, 0 to 100]
