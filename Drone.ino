@@ -663,7 +663,7 @@ void writeESC(float FR, float FL, float BL, float BR) {
   long start = micros();
   for(int i = 0; i < 4; i++) {
     delayMicroseconds(arr[i][0]);
-    PORTD &= (B11111111^(1<<arr[i][1]));
+    PORTD &= (B11111111^(1<<arr[i][1])); // set the pin arr[i][1] to low
   }
   interrupts();
 
