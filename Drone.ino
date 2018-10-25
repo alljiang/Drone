@@ -688,11 +688,10 @@ void bubbleSort(long a[][2], int size) {
 float getBatteryVoltage() {
   analogReference(INTERNAL); //reference from 1.1V
   double ADCVal = analogRead(A7);
-  float val = (ADCVal / 1024.) * 1.1 / (737. / (9700. + 737.)); //R1 = 9.7k  R2 = 737
-  double a = -0.0033;
-  double b = 1.0785;
-  double c = -0.305;
-  float output = ((a * val * val + b * val + c * 2) * 10) / 10;
+  float R1 = 5560;
+  float R2 = 422;
+  float val = (ADCVal / 1024.) * 1.1 / (R2. / (R1. + R2.));
+  float output = val;
   if (output < 5.5) output = 0; //probably just voltage from the usb input
   return output;
 }

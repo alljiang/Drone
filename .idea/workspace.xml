@@ -23,8 +23,6 @@
               <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
               <folding>
                 <element signature="imports" expanded="true" />
-                <element signature="e#11388#11567#0" expanded="true" />
-                <element signature="e#11566#11567#0" expanded="true" />
                 <element signature="e#20012#20013#0" expanded="true" />
                 <element signature="e#20053#20054#0" expanded="true" />
               </folding>
@@ -154,6 +152,10 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="AndroidView" />
+      <pane id="PackagesPane" />
+      <pane id="Scope" />
+      <pane id="Scratches" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -181,10 +183,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="PackagesPane" />
-      <pane id="Scratches" />
-      <pane id="AndroidView" />
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -494,6 +492,8 @@
       <workItem from="1539895043230" duration="14122000" />
       <workItem from="1540239958076" duration="2181000" />
       <workItem from="1540332097840" duration="3279000" />
+      <workItem from="1540416923722" duration="1203000" />
+      <workItem from="1540435166225" duration="35000" />
     </task>
     <servers />
   </component>
@@ -530,7 +530,7 @@
     </history-entry>
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="584613000" />
+    <option name="totallyTimeSpent" value="585851000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1912" y="-8" width="1936" height="1096" extended-state="6" />
@@ -589,8 +589,6 @@
           <caret line="430" column="17" lean-forward="true" selection-start-line="430" selection-start-column="17" selection-end-line="430" selection-end-column="17" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#11388#11567#0" expanded="true" />
-            <element signature="e#11566#11567#0" expanded="true" />
             <element signature="e#20012#20013#0" expanded="true" />
             <element signature="e#20053#20054#0" expanded="true" />
           </folding>
@@ -794,8 +792,6 @@
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#11388#11567#0" expanded="true" />
-            <element signature="e#11566#11567#0" expanded="true" />
             <element signature="e#20012#20013#0" expanded="true" />
             <element signature="e#20053#20054#0" expanded="true" />
           </folding>
