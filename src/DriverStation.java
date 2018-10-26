@@ -20,7 +20,6 @@ import java.util.concurrent.*;
 
 public class DriverStation
 {
-
     private JPanel panelMain;
     private JButton Enable_Status; //Enabled Color = 00ff02 | Disabled Color = FF0007
     private JLabel ElapsedTimeLabel;
@@ -682,7 +681,7 @@ public class DriverStation
         double toChange = timeLength * YAxisVal / ((YAxisVal > 0) ? 3000. : 2500.);
         currentThrottle += toChange;
         currentThrottle = Math.min(100, Math.max(0, currentThrottle));
-        send(new byte[]{0x2, (byte) currentThrottle, (byte) Math.round(RYAxisVal), (byte) Math.round(RXAxisVal), Btn6 ? (byte) 1 : (byte) 0, Btn7 ? (byte) 1 : (byte) 0});
+        send(new byte[]{0x2, (byte) currentThrottle, (byte) Math.round(RYAxisVal), (byte) Math.round(RXAxisVal), (byte) Math.round(XAxisVal)});
         System.out.println((byte) currentThrottle);
     }
 

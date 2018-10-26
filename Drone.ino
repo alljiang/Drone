@@ -81,6 +81,11 @@ long lastUpdateBattery = 0;
 long lastUpdateMotors = 0;
 long lastUpdateMPURates = 0;
 
+//LED Scheduler
+long lastDisabledBlink = 0;
+long disabledBlinkPeriod = 500;
+boolean disabledBlinkIsOff = true;
+
 long updateMPUAnglesPeriod = 300;
 long updateBatteryPeriod = 5000;
 long updateMotorsPeriod = 300;
@@ -90,6 +95,7 @@ long timeout = 600;
 long receiveTimeout = 30;
 long sampleTime = 4;
 int controlRate = 125;
+int yawControlRate = 30;
 
 boolean FRESC = true;
 boolean FLESC = true;
@@ -110,6 +116,12 @@ void setup() {
   digitalWrite(SetPin, LOW);
   hc12.begin(initialBaud);
   hc12.setTimeout(0);
+
+  pinMode(A0,OUTPUT); //FR LED
+  pinMode(10,OUTPUT); //FL LED
+  pinMode(11,OUTPUT); //BL LED
+  pinMode(13,OUTPUT); //BR LED
+  setLED(0,0,0,0);
 
   delay(1000);
   wdt_reset();
@@ -132,7 +144,10 @@ void setup() {
 
 void loop() {
   long now = millis();
-  if ((millis() - lastCommandTime > timeout) || !enabled) disable();
+  if ((millis() - lastCommandTime > timeout) || !enabled) {
+    disable();
+  }
+  LEDLoop();
   receiveCommands();
   receiveCommands();
   receiveCommands();
@@ -142,6 +157,32 @@ void loop() {
     while (millis() - lastTime <= sampleTime) {}
     drive();
     lastTime = millis();
+  }
+}
+
+void LEDLoop() {
+  long t = millis();
+  //connected but disabled blink
+  if ((t - lastCommandTime < timeout) && !enabled) {
+    if(t - lastDisabledBlink > disabledBlinkPeriod) {
+      lastDisabledBlink = t;
+      if(disabledBlinkIsOff) {
+        disabledBlinkIsOff = false;
+        setLED(1,1,1,1);
+      }
+      else {
+        disabledBlinkIsOff = true;
+        setLED(0,0,0,0);
+      }
+    }
+  }
+  //disconnected off
+  else if ((millis() - lastCommandTime > timeout)) {
+    setLED(0,0,0,0);
+  }
+  //enabled on
+  else if(enabled) {
+    setLED(1,1,1,1);
   }
 }
 
@@ -255,16 +296,16 @@ void receiveCommands() {
   }
   else if (command == 0x2) //set joystick values
   {
-    if(availableBytes >= (1+5+1)) {
+    if(availableBytes >= (1+4+1)) {
       byte trash[] = {};
       hc12.readBytes(trash, 1);
     }
     else return;
-    byte holder[5];
-    readSerial(holder, 5);
+    byte holder[4];
+    readSerial(holder, 4);
     byte checksum[1];
     readSerial(checksum, 1);
-    byte calculatedChecksum = calculateChecksum(holder, 5) + command;
+    byte calculatedChecksum = calculateChecksum(holder, 4) + command;
     if (calculatedChecksum != checksum[0])
     {
       hc12.flush();
@@ -276,8 +317,7 @@ void receiveCommands() {
     YAxis = holder[0];
     RYAxis = holder[1];
     RXAxis = holder[2];
-    RTrig = holder[3] == 0 ? false : true;
-    LTrig = holder[4] == 0 ? false : true;
+    XAxis = holder[3];
   }
   else if (command == 0x3) //set motor testing
   {
@@ -511,8 +551,9 @@ void disable() {
 
 void drive() {
   if(currentPitchAngle == lastPitchAngle || currentRollAngle == lastRollAngle) return;
-  if (RYAxis > 100) RYAxis = map(RYAxis, 156, 250, -100, 0);
+  if (RYAxis > 100) RYAxis = map(RYAxis, 156, 250, -100, 0); // change to signed
   if (RXAxis > 100) RXAxis = map(RXAxis, 156, 250, -100, 0);
+  if (XAxis > 100) XAxis = map(XAxis, 156, 250, -100, 0);
 
   //pitch angle calculations
   double errorPitchAngle = currentPitchAngle;
@@ -538,6 +579,7 @@ void drive() {
   if (rollPIDOutputAngle > maxPID) rollPIDOutputAngle = maxPID;
   if (rollPIDOutputAngle < -maxPID) rollPIDOutputAngle = -maxPID;
 
+  double expectedYawRate = map(XAxis, -100, 100, -yawControlRate, yawControlRate);
   double expectedPitchRate = map(RYAxis, -100, 100, -controlRate, controlRate) - pitchPIDOutputAngle;
   double expectedRollRate = map(RXAxis, -100, 100, controlRate, -controlRate) - rollPIDOutputAngle;
 
@@ -572,7 +614,6 @@ void drive() {
   if (rollPIDOutputRate < -maxPID) rollPIDOutputRate = -maxPID;
 
   //yaw calculations
-  double expectedYawRate = 0;
   double errorYawRate = currentYawRate - expectedYawRate;
   double changeErrorYawRate = errorYawRate - lastErrorYawRate;
   IntegralYawRate += yawki * errorYawRate / 100000.;
@@ -590,10 +631,10 @@ void drive() {
   float BROutput = YAxis + -pitchPIDOutputRate - rollPIDOutputRate + yawPIDOutputRate - yawTrim - pitchTrim - rollTrim;
 
   //compensate for voltage
-  //  FROutput += FROutput*(12.6-voltage)/34.5;
-  //  FLOutput += FLOutput*(12.6-voltage)/34.5;
-  //  BLOutput += BLOutput*(12.6-voltage)/34.5;
-  //  BROutput += BROutput*(12.6-voltage)/34.5;
+  FROutput += FROutput*(12.6-voltage)/34.5;
+  FLOutput += FLOutput*(12.6-voltage)/34.5;
+  BLOutput += BLOutput*(12.6-voltage)/34.5;
+  BROutput += BROutput*(12.6-voltage)/34.5;
   
   writeESC(FROutput, FLOutput, BLOutput, BROutput);
 }
@@ -657,7 +698,7 @@ void writeESC(float FR, float FL, float BL, float BR) {
   arr[2][0] -= arr[1][0];
   arr[1][0] -= arr[0][0];
 
-  noInterrupts();
+//  noInterrupts();  //debug
   PORTD |= B01111000; // set DO 3,4,5,6 to high
   delayMicroseconds(900); //prevent delayMicroseconds from reaching >1000
   long start = micros();
@@ -690,10 +731,22 @@ float getBatteryVoltage() {
   double ADCVal = analogRead(A7);
   float R1 = 5560;
   float R2 = 422;
-  float val = (ADCVal / 1024.) * 1.1 / (R2. / (R1. + R2.));
+  float val = (ADCVal / 1024.) * 1.1 / (R2 / (R1 + R2));
   float output = val;
   if (output < 5.5) output = 0; //probably just voltage from the usb input
   return output;
+}
+
+// 1 == high, 0 == low
+void setLED(int FR, int FL, int BL, int BR) {
+  if(FR == 0) digitalWrite(A0, LOW);
+  else digitalWrite(A0, HIGH);
+  if(FL == 0) digitalWrite(10, LOW);
+  else digitalWrite(10, HIGH);
+  if(BL == 0) digitalWrite(11, LOW);
+  else digitalWrite(11, HIGH);
+  if(BR == 0) digitalWrite(13, LOW);
+  else digitalWrite(13, HIGH);
 }
 
 //========================================================MPU 6050 GYRO AND ACCELEROMETER=================================================================
